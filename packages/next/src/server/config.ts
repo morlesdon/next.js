@@ -249,9 +249,9 @@ function assignDefaults(
     )
   }
 
-  if (defaultConfig.experimental?.dynamicIO) {
+  if (defaultConfig.experimental?.cacheComponents) {
     Log.warn(
-      `\`experimental.dynamicIO\` has been defaulted to \`true\` because \`__NEXT_EXPERIMENTAL_CACHE_COMPONENTS\` was set to \`true\` during testing.`
+      `\`experimental.cacheComponents\` has been defaulted to \`true\` because \`__NEXT_EXPERIMENTAL_CACHE_COMPONENTS\` was set to \`true\` during testing.`
     )
   }
 
@@ -262,6 +262,25 @@ function assignDefaults(
       ...defaultConfig.experimental,
       ...config.experimental,
     },
+  }
+
+  // Handle deprecation of experimental.dynamicIO and migrate to experimental.cacheComponents
+  if (result.experimental?.dynamicIO !== undefined) {
+    warnOptionHasBeenDeprecated(
+      result,
+      'experimental.dynamicIO',
+      `\`experimental.dynamicIO\` has been renamed to \`experimental.cacheComponents\`. Please update your ${configFileName} file accordingly.`,
+      silent
+    )
+
+    // If cacheComponents was not explicitly set by the user (i.e., it's still the default value),
+    // use the dynamicIO value. We check against the user config, not the merged result.
+    if (userConfig.experimental?.cacheComponents === undefined) {
+      result.experimental.cacheComponents = result.experimental.dynamicIO
+    }
+
+    // Remove the deprecated property
+    delete result.experimental.dynamicIO
   }
 
   // ensure correct default is set for api-resolver revalidate handling
@@ -282,8 +301,8 @@ function assignDefaults(
     // Prevents usage of certain experimental features outside of canary
     if (result.experimental?.ppr) {
       throw new CanaryOnlyError({ feature: 'experimental.ppr' })
-    } else if (result.experimental?.dynamicIO) {
-      throw new CanaryOnlyError({ feature: 'experimental.dynamicIO' })
+    } else if (result.experimental?.cacheComponents) {
+      throw new CanaryOnlyError({ feature: 'experimental.cacheComponents' })
     } else if (result.experimental?.turbopackPersistentCaching) {
       throw new CanaryOnlyError({
         feature: 'experimental.turbopackPersistentCaching',
@@ -1108,21 +1127,21 @@ function assignDefaults(
     result.htmlLimitedBots = HTML_LIMITED_BOT_UA_RE_STRING
   }
 
-  // "use cache" was originally implicitly enabled with the dynamicIO flag, so
-  // we transfer the value for dynamicIO to the explicit useCache flag to ensure
+  // "use cache" was originally implicitly enabled with the cacheComponents flag, so
+  // we transfer the value for cacheComponents to the explicit useCache flag to ensure
   // backwards compatibility.
   if (result.experimental.useCache === undefined) {
-    result.experimental.useCache = result.experimental.dynamicIO
+    result.experimental.useCache = result.experimental.cacheComponents
   }
 
-  // If dynamicIO is enabled, we also enable PPR.
-  if (result.experimental.dynamicIO) {
+  // If cacheComponents is enabled, we also enable PPR.
+  if (result.experimental.cacheComponents) {
     if (
       userConfig.experimental?.ppr === false ||
       userConfig.experimental?.ppr === 'incremental'
     ) {
       throw new Error(
-        `\`experimental.ppr\` can not be \`${JSON.stringify(userConfig.experimental?.ppr)}\` when \`experimental.dynamicIO\` is \`true\`. PPR is implicitly enabled when Dynamic IO is enabled.`
+        `\`experimental.ppr\` can not be \`${JSON.stringify(userConfig.experimental?.ppr)}\` when \`experimental.cacheComponents\` is \`true\`. PPR is implicitly enabled when Cache Components is enabled.`
       )
     }
 
@@ -1423,14 +1442,14 @@ export default async function loadConfig(
     if (
       userConfig.experimental &&
       userConfig.experimental.enablePrerenderSourceMaps === undefined &&
-      userConfig.experimental.dynamicIO === true
+      userConfig.experimental.cacheComponents === true
     ) {
       userConfig.experimental.enablePrerenderSourceMaps = true
       addConfiguredExperimentalFeature(
         configuredExperimentalFeatures,
         'enablePrerenderSourceMaps',
         true,
-        'enabled by `experimental.dynamicIO`'
+        'enabled by `experimental.cacheComponents`'
       )
     }
 

@@ -411,7 +411,7 @@ export async function buildAppStaticPaths({
   dir,
   page,
   distDir,
-  dynamicIO,
+  cacheComponents,
   authInterrupts,
   segments,
   isrFlushToDisk,
@@ -429,7 +429,7 @@ export async function buildAppStaticPaths({
 }: {
   dir: string
   page: string
-  dynamicIO: boolean
+  cacheComponents: boolean
   authInterrupts: boolean
   segments: AppSegment[]
   distDir: string
@@ -486,7 +486,7 @@ export async function buildAppStaticPaths({
       supportsDynamicResponse: true,
       isRevalidate: false,
       experimental: {
-        dynamicIO,
+        cacheComponents,
         authInterrupts,
       },
       waitUntil: afterRunner.context.waitUntil,
@@ -733,7 +733,7 @@ export async function buildAppStaticPaths({
       : undefined
 
   // Now we have to set the throwOnEmptyStaticShell for each of the routes.
-  if (prerenderedRoutes && dynamicIO) {
+  if (prerenderedRoutes && cacheComponents) {
     assignErrorIfEmpty(prerenderedRoutes, routeParamKeys)
   }
 
