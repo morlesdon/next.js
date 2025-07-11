@@ -21,38 +21,16 @@ import {
 import { isLocalURL } from '../../shared/lib/router/utils/is-local-url'
 import { dispatchNavigateAction } from '../components/app-router-instance'
 import { errorOnce } from '../../shared/lib/utils/error-once'
+import { constructHref } from '../../shared/lib/router/utils/construct-href'
 
 type Url = string | UrlObject
-type RequiredKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? never : K
-}[keyof T]
 type OptionalKeys<T> = {
   [K in keyof T]-?: {} extends Pick<T, K> ? K : never
 }[keyof T]
 
 type OnNavigateEventHandler = (event: { preventDefault: () => void }) => void
 
-type InternalLinkProps = {
-  /**
-   * **Required**. The path or URL to navigate to. It can also be an object (similar to `URL`).
-   *
-   * @example
-   * ```tsx
-   * // Navigate to /dashboard:
-   * <Link href="/dashboard">Dashboard</Link>
-   *
-   * // Navigate to /about?name=test:
-   * <Link href={{ pathname: '/about', query: { name: 'test' } }}>
-   *   About
-   * </Link>
-   * ```
-   *
-   * @remarks
-   * - For external URLs, use a fully qualified URL such as `https://...`.
-   * - In the App Router, dynamic routes must not include bracketed segments in `href`.
-   */
-  href: Url
-
+type InternalLinkPropsBase = {
   /**
    * @deprecated v10.0.0: `href` props pointing to a dynamic route are
    * automatically resolved and no longer require the `as` prop.
@@ -212,6 +190,63 @@ type InternalLinkProps = {
   onNavigate?: OnNavigateEventHandler
 }
 
+type InternalLinkProps = InternalLinkPropsBase &
+  (
+    | {
+        /**
+         * **Required**. The path or URL to navigate to. It can also be an object (similar to `URL`).
+         * Accepts any string for external URLs and backwards compatibility.
+         *
+         * @example
+         * ```tsx
+         * // Navigate to /dashboard:
+         * <Link href="/dashboard">Dashboard</Link>
+         *
+         * // External URL:
+         * <Link href="https://example.com">External Site</Link>
+         *
+         * // Navigate to /about?name=test:
+         * <Link href={{ pathname: '/about', query: { name: 'test' } }}>
+         *   About
+         * </Link>
+         * ```
+         *
+         * @remarks
+         * - For external URLs, use a fully qualified URL such as `https://...`.
+         * - In the App Router, dynamic routes must not include bracketed segments in `href`.
+         */
+        href: Url
+
+        /**
+         * These props are not available when using href
+         */
+        path?: never
+        params?: never
+        searchParams?: never
+      }
+    | {
+        /**
+         * The href property is not available when using path
+         */
+        href?: never
+
+        /**
+         * The route path template for typed links (e.g., '/blog/[slug]')
+         */
+        path: string
+
+        /**
+         * Parameters for dynamic route segments (only available with path)
+         */
+        params?: Record<string, string | string[]>
+
+        /**
+         * Search parameters to append to the URL (only available with path)
+         */
+        searchParams?: Record<string, string | string[]>
+      }
+  )
+
 // TODO-APP: Include the full set of Anchor props
 // adding this to the publicly exported type currently breaks existing apps
 
@@ -219,7 +254,6 @@ type InternalLinkProps = {
 // isn't generated yet. It will be replaced when the webpack plugin runs.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type LinkProps<RouteInferType = any> = InternalLinkProps
-type LinkPropsRequired = RequiredKeys<LinkProps>
 type LinkPropsOptional = OptionalKeys<Omit<InternalLinkProps, 'locale'>>
 
 function isModifiedEvent(event: React.MouseEvent): boolean {
@@ -341,8 +375,11 @@ export default function LinkComponent(
     onNavigate,
     ref: forwardedRef,
     unstable_dynamicOnHover,
+    path,
+    params,
+    searchParams,
     ...restProps
-  } = props
+  } = props as any // TypeScript discriminated union handled at type level
 
   children = childrenProp
 
@@ -382,31 +419,41 @@ export default function LinkComponent(
       )
     }
 
-    // TypeScript trick for type-guarding:
-    const requiredPropsGuard: Record<LinkPropsRequired, true> = {
-      href: true,
-    } as const
-    const requiredProps: LinkPropsRequired[] = Object.keys(
-      requiredPropsGuard
-    ) as LinkPropsRequired[]
-    requiredProps.forEach((key: LinkPropsRequired) => {
-      if (key === 'href') {
-        if (
-          props[key] == null ||
-          (typeof props[key] !== 'string' && typeof props[key] !== 'object')
-        ) {
-          throw createPropError({
-            key,
-            expected: '`string` or `object`',
-            actual: props[key] === null ? 'null' : typeof props[key],
-          })
-        }
-      } else {
-        // TypeScript trick for type-guarding:
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _: never = key
+    // Validate that exactly one of href or path is provided
+    if (hrefProp && path) {
+      throw new Error(
+        'Invalid <Link> with both `href` and `path` props. You must use exactly one of these props.'
+      )
+    }
+
+    if (!hrefProp && !path) {
+      throw new Error(
+        'Invalid <Link> with neither `href` nor `path` prop. You must provide exactly one of these props.'
+      )
+    }
+
+    if (params && !path) {
+      throw new Error(
+        'Invalid <Link> with `params` prop but no `path` prop. `params` can only be used with `path`.'
+      )
+    }
+
+    if (searchParams && !path) {
+      throw new Error(
+        'Invalid <Link> with `searchParams` prop but no `path` prop. `searchParams` can only be used with `path`.'
+      )
+    }
+
+    if (path && !params && !searchParams) {
+      // Check if path appears to have dynamic segments
+      if (path.includes('[') && path.includes(']')) {
+        console.warn(
+          `<Link> with path="${path}" appears to have dynamic segments but no params were provided. This may result in incorrect URLs.`
+        )
       }
-    })
+    }
+
+    // Skip the required props validation since we handle it manually above
 
     // TypeScript trick for type-guarding:
     const optionalPropsGuard: Record<LinkPropsOptional, true> = {
@@ -422,6 +469,10 @@ export default function LinkComponent(
       onTouchStart: true,
       legacyBehavior: true,
       onNavigate: true,
+      href: true,
+      path: true,
+      params: true,
+      searchParams: true,
     } as const
     const optionalProps: LinkPropsOptional[] = Object.keys(
       optionalPropsGuard
@@ -434,6 +485,38 @@ export default function LinkComponent(
           throw createPropError({
             key,
             expected: '`string` or `object`',
+            actual: valType,
+          })
+        }
+      } else if (key === 'href') {
+        if (props[key] && valType !== 'string' && valType !== 'object') {
+          throw createPropError({
+            key,
+            expected: '`string` or `object`',
+            actual: valType,
+          })
+        }
+      } else if (key === 'path') {
+        if (props[key] && valType !== 'string') {
+          throw createPropError({
+            key,
+            expected: '`string`',
+            actual: valType,
+          })
+        }
+      } else if (key === 'params') {
+        if (props[key] && valType !== 'object') {
+          throw createPropError({
+            key,
+            expected: '`object`',
+            actual: valType,
+          })
+        }
+      } else if (key === 'searchParams') {
+        if (props[key] && valType !== 'object') {
+          throw createPropError({
+            key,
+            expected: '`object`',
             actual: valType,
           })
         }
@@ -477,10 +560,6 @@ export default function LinkComponent(
             actual: valType,
           })
         }
-      } else {
-        // TypeScript trick for type-guarding:
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _: never = key
       }
     })
   }
@@ -517,12 +596,14 @@ export default function LinkComponent(
   }
 
   const { href, as } = React.useMemo(() => {
-    const resolvedHref = formatStringOrUrl(hrefProp)
+    const resolvedHref = path
+      ? constructHref(path, params, searchParams)
+      : formatStringOrUrl(hrefProp!)
     return {
       href: resolvedHref,
       as: asProp ? formatStringOrUrl(asProp) : resolvedHref,
     }
-  }, [hrefProp, asProp])
+  }, [hrefProp, asProp, path, params, searchParams])
 
   // This will return the first child, if multiple are provided it will throw an error
   let child: any

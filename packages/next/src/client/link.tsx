@@ -19,24 +19,12 @@ import { getDomainLocale } from './get-domain-locale'
 import { addBasePath } from './add-base-path'
 import { useMergedRef } from './use-merged-ref'
 import { errorOnce } from '../shared/lib/utils/error-once'
+import { constructHref } from '../shared/lib/router/utils/construct-href'
 
 type Url = string | UrlObject
-type RequiredKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? never : K
-}[keyof T]
-type OptionalKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? K : never
-}[keyof T]
-
 type OnNavigateEventHandler = (event: { preventDefault: () => void }) => void
 
-type InternalLinkProps = {
-  /**
-   * The path or URL to navigate to. It can also be an object.
-   *
-   * @example https://nextjs.org/docs/api-reference/next/link#with-url-object
-   */
-  href: Url
+type InternalLinkPropsBase = {
   /**
    * Optional decorator for the path that will be shown in the browser URL bar. Before Next.js 9.5.3 this was used for dynamic routes, check our [previous docs](https://github.com/vercel/next.js/blob/v9.5.2/docs/api-reference/next/link.md#dynamic-routes) to see how it worked. Note: when this path differs from the one provided in `href` the previous `href`/`as` behavior is used as shown in the [previous docs](https://github.com/vercel/next.js/blob/v9.5.2/docs/api-reference/next/link.md#dynamic-routes).
    */
@@ -114,6 +102,43 @@ type InternalLinkProps = {
   onNavigate?: OnNavigateEventHandler
 }
 
+type InternalLinkProps = InternalLinkPropsBase &
+  (
+    | {
+        /**
+         * The path or URL to navigate to. It can also be an object.
+         * Accepts any string for external URLs and backwards compatibility.
+         *
+         * @example https://nextjs.org/docs/api-reference/next/link#with-url-object
+         */
+        href: Url
+        /**
+         * These props are not available when using href
+         */
+        path?: never
+        params?: never
+        searchParams?: never
+      }
+    | {
+        /**
+         * The href property is not available when using path
+         */
+        href?: never
+        /**
+         * The route path template for typed links (e.g., '/blog/[slug]')
+         */
+        path: string
+        /**
+         * Parameters for dynamic route segments (only available with path)
+         */
+        params?: Record<string, string | string[]>
+        /**
+         * Search parameters to append to the URL (only available with path)
+         */
+        searchParams?: Record<string, string | string[]>
+      }
+  )
+
 // TODO-APP: Include the full set of Anchor props
 // adding this to the publicly exported type currently breaks existing apps
 
@@ -123,9 +148,7 @@ type InternalLinkProps = {
 // in declarations of libraries dependending on Next.js.
 // Not trivial to reproduce so only convert to an interface when needed.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface LinkProps<RouteInferType = any> extends InternalLinkProps {}
-type LinkPropsRequired = RequiredKeys<LinkProps>
-type LinkPropsOptional = OptionalKeys<InternalLinkProps>
+export type LinkProps<RouteInferType = any> = InternalLinkProps
 
 const prefetched = new Set<string>()
 
@@ -310,8 +333,11 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
       onMouseEnter: onMouseEnterProp,
       onTouchStart: onTouchStartProp,
       legacyBehavior = false,
+      path,
+      params,
+      searchParams,
       ...restProps
-    } = props
+    } = props as any // TypeScript discriminated union handled at type level
 
     children = childrenProp
 
@@ -341,55 +367,83 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
         )
       }
 
-      // TypeScript trick for type-guarding:
-      const requiredPropsGuard: Record<LinkPropsRequired, true> = {
-        href: true,
-      } as const
-      const requiredProps: LinkPropsRequired[] = Object.keys(
-        requiredPropsGuard
-      ) as LinkPropsRequired[]
-      requiredProps.forEach((key: LinkPropsRequired) => {
+      // Validate mutual exclusivity and basic structure first
+      // Validate that exactly one of href or path is provided
+      if (hrefProp && path) {
+        throw new Error(
+          'Invalid <Link> with both `href` and `path` props. You must use exactly one of these props.'
+        )
+      }
+
+      if (!hrefProp && !path) {
+        throw new Error(
+          'Invalid <Link> with neither `href` nor `path` prop. You must provide exactly one of these props.'
+        )
+      }
+
+      if (params && !path) {
+        throw new Error(
+          'Invalid <Link> with `params` prop but no `path` prop. `params` can only be used with `path`.'
+        )
+      }
+
+      if (searchParams && !path) {
+        throw new Error(
+          'Invalid <Link> with `searchParams` prop but no `path` prop. `searchParams` can only be used with `path`.'
+        )
+      }
+
+      // Validate individual prop types
+      const allProps = {
+        href: hrefProp,
+        path,
+        params,
+        searchParams,
+        as: asProp,
+        replace,
+        scroll,
+        shallow,
+        passHref,
+        prefetch: prefetchProp,
+        locale,
+        onClick,
+        onMouseEnter: onMouseEnterProp,
+        onTouchStart: onTouchStartProp,
+        legacyBehavior,
+        onNavigate,
+      }
+
+      Object.entries(allProps).forEach(([key, value]) => {
+        if (value == null) return // Skip null/undefined values
+
+        const valType = typeof value
+
         if (key === 'href') {
-          if (
-            props[key] == null ||
-            (typeof props[key] !== 'string' && typeof props[key] !== 'object')
-          ) {
+          if (valType !== 'string' && valType !== 'object') {
             throw createPropError({
               key,
               expected: '`string` or `object`',
-              actual: props[key] === null ? 'null' : typeof props[key],
+              actual: valType,
             })
           }
-        } else {
-          // TypeScript trick for type-guarding:
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const _: never = key
-        }
-      })
-
-      // TypeScript trick for type-guarding:
-      const optionalPropsGuard: Record<LinkPropsOptional, true> = {
-        as: true,
-        replace: true,
-        scroll: true,
-        shallow: true,
-        passHref: true,
-        prefetch: true,
-        locale: true,
-        onClick: true,
-        onMouseEnter: true,
-        onTouchStart: true,
-        legacyBehavior: true,
-        onNavigate: true,
-      } as const
-      const optionalProps: LinkPropsOptional[] = Object.keys(
-        optionalPropsGuard
-      ) as LinkPropsOptional[]
-      optionalProps.forEach((key: LinkPropsOptional) => {
-        const valType = typeof props[key]
-
-        if (key === 'as') {
-          if (props[key] && valType !== 'string' && valType !== 'object') {
+        } else if (key === 'path') {
+          if (valType !== 'string') {
+            throw createPropError({
+              key,
+              expected: '`string`',
+              actual: valType,
+            })
+          }
+        } else if (key === 'params' || key === 'searchParams') {
+          if (valType !== 'object' || Array.isArray(value)) {
+            throw createPropError({
+              key,
+              expected: '`object`',
+              actual: Array.isArray(value) ? 'array' : valType,
+            })
+          }
+        } else if (key === 'as') {
+          if (valType !== 'string' && valType !== 'object') {
             throw createPropError({
               key,
               expected: '`string` or `object`',
@@ -397,7 +451,7 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
             })
           }
         } else if (key === 'locale') {
-          if (props[key] && valType !== 'string') {
+          if (valType !== 'string') {
             throw createPropError({
               key,
               expected: '`string`',
@@ -410,7 +464,7 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
           key === 'onTouchStart' ||
           key === 'onNavigate'
         ) {
-          if (props[key] && valType !== 'function') {
+          if (valType !== 'function') {
             throw createPropError({
               key,
               expected: '`function`',
@@ -424,7 +478,7 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
           key === 'passHref' ||
           key === 'legacyBehavior'
         ) {
-          if (props[key] != null && valType !== 'boolean') {
+          if (valType !== 'boolean') {
             throw createPropError({
               key,
               expected: '`boolean`',
@@ -432,41 +486,42 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkPropsReal>(
             })
           }
         } else if (key === 'prefetch') {
-          if (
-            props[key] != null &&
-            valType !== 'boolean' &&
-            props[key] !== 'auto'
-          ) {
+          if (valType !== 'boolean' && value !== 'auto') {
             throw createPropError({
               key,
               expected: '`boolean | "auto"`',
               actual: valType,
             })
           }
-        } else {
-          // TypeScript trick for type-guarding:
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const _: never = key
         }
       })
     }
 
     const { href, as } = React.useMemo(() => {
       if (!router) {
-        const resolvedHref = formatStringOrUrl(hrefProp)
+        const resolvedHref = path
+          ? constructHref(path, params, searchParams)
+          : formatStringOrUrl(hrefProp!)
         return {
           href: resolvedHref,
           as: asProp ? formatStringOrUrl(asProp) : resolvedHref,
         }
       }
 
-      const [resolvedHref, resolvedAs] = resolveHref(router, hrefProp, true)
+      const resolvedHref = path
+        ? constructHref(path, params, searchParams)
+        : hrefProp!
+      const [processedHref, resolvedAs] = resolveHref(
+        router,
+        resolvedHref,
+        true
+      )
 
       return {
-        href: resolvedHref,
-        as: asProp ? resolveHref(router, asProp) : resolvedAs || resolvedHref,
+        href: processedHref,
+        as: asProp ? resolveHref(router, asProp) : resolvedAs || processedHref,
       }
-    }, [router, hrefProp, asProp])
+    }, [router, hrefProp, asProp, path, params, searchParams])
 
     const previousHref = React.useRef<string>(href)
     const previousAs = React.useRef<string>(as)

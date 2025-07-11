@@ -161,5 +161,133 @@ declare global {
     params: Promise<ParamsOf<P>>
   } & LayoutChildren<P>
 }
+
+// Module augmentations for typed links
+declare module 'next/link' {
+  import type { LinkProps as OriginalLinkProps } from 'next/dist/client/app-dir/link.js'
+  import type { AnchorHTMLAttributes, DetailedHTMLProps } from 'react'
+  import type { UrlObject } from 'url'
+
+  type LinkRestProps = Omit<
+    Omit<
+      DetailedHTMLProps<
+        AnchorHTMLAttributes<HTMLAnchorElement>,
+        HTMLAnchorElement
+      >,
+      keyof OriginalLinkProps
+    > &
+      OriginalLinkProps,
+    'href' | 'path' | 'params' | 'searchParams'
+  >
+
+  type LinkPropsWithHref = LinkRestProps & {
+    /**
+     * The path or URL to navigate to. It can also be an object.
+     * Accepts any string for external URLs and backwards compatibility.
+     * 
+     * @example
+     * \`\`\`tsx
+     * <Link href="/about">About</Link>
+     * <Link href="https://example.com">External</Link>
+     * <Link href={{ pathname: "/about", query: { tab: "contact" } }}>About</Link>
+     * \`\`\`
+     */
+    href: string | UrlObject
+    path?: never
+    params?: never
+    searchParams?: never
+  }
+
+  type LinkPropsWithPath<T extends Routes> = LinkRestProps & {
+    href?: never
+    /**
+     * The route path template for typed navigation
+     * 
+     * @example
+     * \`\`\`tsx
+     * <Link path="/blog/[slug]" params={{ slug: "my-post" }}>My Post</Link>
+     * \`\`\`
+     */
+    path: T
+    /**
+     * Parameters for dynamic route segments. Required if the route has dynamic segments.
+     * 
+     * @example
+     * \`\`\`tsx
+     * // For route /blog/[slug]
+     * <Link path="/blog/[slug]" params={{ slug: "hello-world" }}>Post</Link>
+     * 
+     * // For route /docs/[...slug]  
+     * <Link path="/docs/[...slug]" params={{ slug: ["api", "reference"] }}>Docs</Link>
+     * \`\`\`
+     */
+    params: {} extends ParamsOf<T> ? {} : ParamsOf<T>
+    /**
+     * Search parameters to append to the URL as query string
+     * 
+     * @example
+     * \`\`\`tsx
+     * <Link path="/search" searchParams={{ q: "react", filter: "latest" }}>
+     *   Search React
+     * </Link>
+     * \`\`\`
+     */
+    searchParams?: Record<string, string | string[]>
+  }
+
+  export type LinkProps<RouteInferType extends Routes = Routes> = 
+    | LinkPropsWithHref
+    | LinkPropsWithPath<RouteInferType>
+
+  /**
+   * A React component that extends the HTML \`<a>\` element to provide
+   * prefetching and client-side navigation. This is the primary way to navigate between routes in Next.js.
+   *
+   * @example
+   * \`\`\`tsx
+   * // Traditional href usage (accepts any string)
+   * <Link href="/about">About</Link>
+   * <Link href="https://example.com">External</Link>
+   *
+   * // Typed path usage with parameters
+   * <Link path="/blog/[slug]" params={{ slug: "my-post" }}>
+   *   My Blog Post
+   * </Link>
+   *
+   * // With search parameters
+   * <Link path="/search" searchParams={{ q: "nextjs" }}>
+   *   Search NextJS
+   * </Link>
+   * \`\`\`
+   */
+  export default function Link<RouteType extends Routes = Routes>(
+    props: LinkProps<RouteType> & { children: React.ReactNode }
+  ): JSX.Element
+}
+
+declare module 'next/navigation' {
+  export * from 'next/dist/client/components/navigation.js'
+
+  import type { NavigateOptions, AppRouterInstance as OriginalAppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime.js'
+  
+  interface AppRouterInstance extends OriginalAppRouterInstance {
+    /**
+     * Navigate to the provided href.
+     * Pushes a new history entry.
+     */
+    push<RouteType extends Routes>(href: RouteType, options?: NavigateOptions): void
+    /**
+     * Navigate to the provided href.
+     * Replaces the current history entry.
+     */
+    replace<RouteType extends Routes>(href: RouteType, options?: NavigateOptions): void
+    /**
+     * Prefetch the provided href.
+     */
+    prefetch<RouteType extends Routes>(href: RouteType): void
+  }
+
+  export function useRouter(): AppRouterInstance;
+}
 `
 }
