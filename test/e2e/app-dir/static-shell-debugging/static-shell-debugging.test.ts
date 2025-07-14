@@ -1,30 +1,22 @@
 import { nextTestSetup } from 'e2e-utils'
 
 describe('static-shell-debugging', () => {
-  const ppr = Boolean(process.env.__NEXT_EXPERIMENTAL_PPR)
-  const context = {
-    ppr,
-    debugging: ppr,
-  }
-
   const { next, skipped, isNextDev } = nextTestSetup({
     files: __dirname,
     // This test skips deployment because env vars that are doubled underscore prefixed
     // are not supported. This is also intended to be used in development.
     skipDeployment: true,
     env: {
-      __NEXT_EXPERIMENTAL_STATIC_SHELL_DEBUGGING: context.debugging
+      __NEXT_EXPERIMENTAL_STATIC_SHELL_DEBUGGING: process.env
+        .__NEXT_EXPERIMENTAL_CACHE_COMPONENTS
         ? '1'
         : undefined,
-    },
-    nextConfig: {
-      experimental: { ppr: context.ppr },
     },
   })
 
   if (skipped) return
 
-  if (context.debugging && context.ppr) {
+  if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS) {
     it('should only render the static shell', async () => {
       const res = await next.fetch('/?__nextppronly=1')
       expect(res.status).toBe(200)

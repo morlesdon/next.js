@@ -40,12 +40,14 @@ export default class FileSystemCache implements CacheHandler {
   private revalidatedTags: string[]
   private static debug: boolean = !!process.env.NEXT_PRIVATE_DEBUG_CACHE
   private static memoryCache: LRUCache<CacheHandlerValue> | undefined
+  private readonly cacheComponents: boolean
 
   constructor(ctx: FileSystemCacheContext) {
     this.fs = ctx.fs
     this.flushToDisk = ctx.flushToDisk
     this.serverDistDir = ctx.serverDistDir
     this.revalidatedTags = ctx.revalidatedTags
+    this.cacheComponents = ctx.cacheComponents === true
 
     if (ctx.maxMemoryCacheSize) {
       if (!FileSystemCache.memoryCache) {
@@ -218,7 +220,7 @@ export default class FileSystemCache implements CacheHandler {
           if (!ctx.isFallback) {
             rscData = await this.fs.readFile(
               this.getFilePath(
-                `${key}${ctx.isRoutePPREnabled ? RSC_PREFETCH_SUFFIX : RSC_SUFFIX}`,
+                `${key}${this.cacheComponents ? RSC_PREFETCH_SUFFIX : RSC_SUFFIX}`,
                 IncrementalCacheKind.APP_PAGE
               )
             )
@@ -375,7 +377,7 @@ export default class FileSystemCache implements CacheHandler {
           this.getFilePath(
             `${key}${
               isAppPath
-                ? ctx.isRoutePPREnabled
+                ? this.cacheComponents
                   ? RSC_PREFETCH_SUFFIX
                   : RSC_SUFFIX
                 : NEXT_DATA_SUFFIX

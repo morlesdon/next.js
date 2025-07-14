@@ -147,7 +147,6 @@ import { toRoute } from './lib/to-route'
 import type { DeepReadonly } from '../shared/lib/deep-readonly'
 import { isNodeNextRequest, isNodeNextResponse } from './base-http/helpers'
 import { patchSetHeaderWithCookieSupport } from './lib/patch-set-header'
-import { checkIsAppPPREnabled } from './lib/experimental/ppr'
 import {
   getBuiltinRequestContext,
   type WaitUntil,
@@ -446,7 +445,7 @@ export default abstract class Server<
     readonly data: NextDataPathnameNormalizer | undefined
   }
 
-  private readonly isAppPPREnabled: boolean
+  private readonly cacheComponents: boolean
   private readonly isAppSegmentPrefetchEnabled: boolean
 
   /**
@@ -524,9 +523,9 @@ export default abstract class Server<
 
     this.enabledDirectories = this.getEnabledDirectories(dev)
 
-    this.isAppPPREnabled =
+    this.cacheComponents =
       this.enabledDirectories.app &&
-      checkIsAppPPREnabled(this.nextConfig.experimental.ppr)
+      this.nextConfig.experimental.cacheComponents === true
 
     this.isAppSegmentPrefetchEnabled =
       this.enabledDirectories.app &&
@@ -541,7 +540,7 @@ export default abstract class Server<
           ? new RSCPathnameNormalizer()
           : undefined,
       prefetchRSC:
-        this.isAppPPREnabled && this.minimalMode
+        this.cacheComponents && this.minimalMode
           ? new PrefetchRSCPathnameNormalizer()
           : undefined,
       segmentPrefetchRSC:
@@ -1108,10 +1107,10 @@ export default abstract class Server<
           if (this.normalizers.data?.match(urlPathname)) {
             addRequestMeta(req, 'isNextDataReq', true)
           }
-          // In minimal mode, if PPR is enabled, then we should check to see if
-          // the request should be a resume request.
+          // In minimal mode, if Cache Components is enabled, then we should
+          // check to see if the request should be a resume request.
           else if (
-            this.isAppPPREnabled &&
+            this.cacheComponents &&
             this.minimalMode &&
             req.headers[NEXT_RESUME_HEADER] === '1' &&
             req.method === 'POST'
@@ -2226,11 +2225,12 @@ export default abstract class Server<
     }
 
     /**
-     * If the route being rendered is an app page, and the ppr feature has been
-     * enabled, then the given route _could_ support PPR.
+     * If the route being rendered is an app page, and the Cache Components
+     * feature has been enabled, then the given route _could_ support Cache
+     * Components.
      */
-    const couldSupportPPR: boolean =
-      this.isAppPPREnabled &&
+    const couldSupportCacheComponents: boolean =
+      this.cacheComponents &&
       typeof routeModule !== 'undefined' &&
       isAppPageRouteModule(routeModule)
 
@@ -2239,51 +2239,36 @@ export default abstract class Server<
     const hasDebugStaticShellQuery =
       process.env.__NEXT_EXPERIMENTAL_STATIC_SHELL_DEBUGGING === '1' &&
       typeof query.__nextppronly !== 'undefined' &&
-      couldSupportPPR
+      couldSupportCacheComponents
 
     // When enabled, this will allow the use of the `?__nextppronly` query
     // to enable debugging of the fallback shell.
     const hasDebugFallbackShellQuery =
       hasDebugStaticShellQuery && query.__nextppronly === 'fallback'
 
-    // This page supports PPR if it is marked as being `PARTIALLY_STATIC` in the
-    // prerender manifest and this is an app page.
-    const isRoutePPREnabled: boolean =
-      couldSupportPPR &&
-      ((
-        prerenderManifest.routes[pathname] ??
-        prerenderManifest.dynamicRoutes[pathname]
-      )?.renderingMode === 'PARTIALLY_STATIC' ||
-        // Ideally we'd want to check the appConfig to see if this page has PPR
-        // enabled or not, but that would require plumbing the appConfig through
-        // to the server during development. We assume that the page supports it
-        // but only during development.
-        (hasDebugStaticShellQuery &&
-          (this.renderOpts.dev === true ||
-            this.experimentalTestProxy === true)))
-
     const isDebugStaticShell: boolean =
-      hasDebugStaticShellQuery && isRoutePPREnabled
+      hasDebugStaticShellQuery && this.cacheComponents
 
     // We should enable debugging dynamic accesses when the static shell
     // debugging has been enabled and we're also in development mode.
     const isDebugDynamicAccesses =
       isDebugStaticShell && this.renderOpts.dev === true
 
-    const isDebugFallbackShell = hasDebugFallbackShellQuery && isRoutePPREnabled
+    const isDebugFallbackShell =
+      hasDebugFallbackShellQuery && this.cacheComponents
 
     // If we're in minimal mode, then try to get the postponed information from
     // the request metadata. If available, use it for resuming the postponed
     // render.
-    const minimalPostponed = isRoutePPREnabled
+    const minimalPostponed = this.cacheComponents
       ? getRequestMeta(req, 'postponed')
       : undefined
 
-    // If PPR is enabled, and this is a RSC request (but not a prefetch), then
-    // we can use this fact to only generate the flight data for the request
-    // because we can't cache the HTML (as it's also dynamic).
+    // If Cache Components is enabled, and this is a RSC request (but not a
+    // prefetch), then we can use this fact to only generate the flight data for
+    // the request because we can't cache the HTML (as it's also dynamic).
     const isDynamicRSCRequest =
-      isRoutePPREnabled && isRSCRequest && !isPrefetchRSCRequest
+      this.cacheComponents && isRSCRequest && !isPrefetchRSCRequest
 
     // Need to read this before it's stripped by stripFlightHeaders. We don't
     // need to transfer it to the request meta because it's only read
@@ -2295,7 +2280,7 @@ export default abstract class Server<
     )
 
     const isHtmlBot = isHtmlBotRequest(req)
-    if (isHtmlBot && isRoutePPREnabled) {
+    if (isHtmlBot && this.cacheComponents) {
       isSSG = false
       this.renderOpts.serveStreamingMetadata = false
     }
@@ -2546,8 +2531,9 @@ export default abstract class Server<
         query: origQuery,
       })
 
-      // When html bots request PPR page, perform the full dynamic rendering.
-      const shouldWaitOnAllReady = isHtmlBot && isRoutePPREnabled
+      // When html bots request Cache Components page, perform the full dynamic
+      // rendering.
+      const shouldWaitOnAllReady = isHtmlBot && this.cacheComponents
 
       const renderOpts: LoadedRenderOpts = {
         ...components,
@@ -2581,10 +2567,6 @@ export default abstract class Server<
                 query: origQuery,
               })
             : resolvedUrl,
-        experimental: {
-          ...opts.experimental,
-          isRoutePPREnabled,
-        },
         supportsDynamicResponse,
         shouldWaitOnAllReady,
         isOnDemandRevalidate,
@@ -2829,7 +2811,7 @@ export default abstract class Server<
         isSSG &&
         cacheControl?.revalidate === 0 &&
         !this.renderOpts.dev &&
-        !isRoutePPREnabled
+        !this.cacheComponents
       ) {
         const staticBailoutInfo = metadata.staticBailoutInfo
 
@@ -2957,7 +2939,7 @@ export default abstract class Server<
         isOnDemandRevalidate = true
       }
 
-      // TODO: adapt for PPR
+      // TODO: adapt for Cache Components
       // only allow on-demand revalidate for fallback: true/blocking
       // or for prerendered fallback: false paths
       if (
@@ -3059,15 +3041,14 @@ export default abstract class Server<
             {
               routeKind: RouteKind.PAGES,
               incrementalCache,
-              isRoutePPREnabled,
               isFallback: true,
             }
           )
         }
-        // If this is a app router page, PPR is enabled, and PPR is also
-        // enabled, then we should use the fallback renderer.
+        // If this is a app router page, Cache Components is enabled, then we
+        // should use the fallback renderer.
         else if (
-          isRoutePPREnabled &&
+          this.cacheComponents &&
           isAppPageRouteModule(components.routeModule) &&
           !isRSCRequest
         ) {
@@ -3093,7 +3074,6 @@ export default abstract class Server<
             {
               routeKind: RouteKind.APP_PAGE,
               incrementalCache,
-              isRoutePPREnabled,
               isFallback: true,
             }
           )
@@ -3137,12 +3117,12 @@ export default abstract class Server<
         }
       }
 
-      // If this is a dynamic route with PPR enabled and the default route
+      // If this is a dynamic route with Cache Components enabled and the default route
       // matches were set, then we should pass the fallback route params to
       // the renderer as this is a fallback revalidation request.
       const fallbackRouteParams =
         isDynamic &&
-        isRoutePPREnabled &&
+        this.cacheComponents &&
         (getRequestMeta(req, 'renderFallbackShell') || isDebugFallbackShell)
           ? getFallbackRouteParams(pathname)
           : null
@@ -3195,7 +3175,6 @@ export default abstract class Server<
         incrementalCache,
         isOnDemandRevalidate,
         isPrefetch: req.headers.purpose === 'prefetch',
-        isRoutePPREnabled,
       }
     )
 
@@ -3272,13 +3251,13 @@ export default abstract class Server<
     }
 
     // If this is in minimal mode and this is a flight request that isn't a
-    // prefetch request while PPR is enabled, it cannot be cached as it contains
-    // dynamic content.
+    // prefetch request while Cache Components is enabled, it cannot be cached
+    // as it contains dynamic content.
     else if (
       this.minimalMode &&
       isRSCRequest &&
       !isPrefetchRSCRequest &&
-      isRoutePPREnabled
+      this.cacheComponents
     ) {
       cacheControl = { revalidate: 0, expire: undefined }
     } else if (!this.renderOpts.dev || (hasServerProps && !isNextDataRequest)) {
@@ -3346,9 +3325,10 @@ export default abstract class Server<
       // should never reach the application layer (lambda). We should either
       // respond from the cache (HIT) or respond with 204 No Content (MISS).
 
-      // Set a header to indicate that PPR is enabled for this route. This
-      // lets the client distinguish between a regular cache miss and a cache
-      // miss due to PPR being disabled. In other contexts this header is used
+      // Set a header to indicate that Cache Components is enabled for this
+      // route. This lets the client distinguish between a regular cache miss
+      // and a cache miss due to Cache Components being disabled. In other
+      // contexts this header is used
       // to indicate that the response contains dynamic data, but here we're
       // only using it to indicate that the feature is enabled — the segment
       // response itself contains whether the data is dynamic.
@@ -3374,11 +3354,11 @@ export default abstract class Server<
       }
 
       // Cache miss. Either a cache entry for this route has not been generated
-      // (which technically should not be possible when PPR is enabled, because
-      // at a minimum there should always be a fallback entry) or there's no
-      // match for the requested segment. Respond with a 204 No Content. We
-      // don't bother to respond with 404, because these requests are only
-      // issued as part of a prefetch.
+      // (which technically should not be possible when Cache Components is
+      // enabled, because at a minimum there should always be a fallback entry)
+      // or there's no match for the requested segment. Respond with a 204 No
+      // Content. We don't bother to respond with 404, because these requests
+      // are only issued as part of a prefetch.
       res.statusCode = 204
       return {
         type: 'rsc',
@@ -3511,8 +3491,8 @@ export default abstract class Server<
 
       // If the request is a data request, then we shouldn't set the status code
       // from the response because it should always be 200. This should be gated
-      // behind the experimental PPR flag.
-      if (cachedData.status && (!isRSCRequest || !isRoutePPREnabled)) {
+      // behind the experimental Cache Components flag.
+      if (cachedData.status && (!isRSCRequest || !this.cacheComponents)) {
         res.statusCode = cachedData.status
       }
 

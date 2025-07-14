@@ -10,8 +10,11 @@ describe('empty-generate-static-params', () => {
   if (skipped) return
 
   it('should mark the page with empty generateStaticParams as SSG in build output', async () => {
-    const isPPREnabled = process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
-    expect(next.cliOutput).toContain(`${isPPREnabled ? '◐' : '●'} /[slug]`)
+    const isCacheComponentsEnabled =
+      process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
+    expect(next.cliOutput).toContain(
+      `${isCacheComponentsEnabled ? '◐' : '●'} /[slug]`
+    )
   })
 
   it('should be a cache miss on the initial render followed by a HIT after being generated', async () => {
@@ -19,10 +22,11 @@ describe('empty-generate-static-params', () => {
     expect(firstResponse.status).toBe(200)
 
     // With PPR enabled, the initial request doesn't send back a cache header
-    const isPPREnabled = process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
+    const isCacheComponentsEnabled =
+      process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
 
     expect(firstResponse.headers.get('x-nextjs-cache')).toBe(
-      isPPREnabled ? null : 'MISS'
+      isCacheComponentsEnabled ? null : 'MISS'
     )
 
     retry(async () => {

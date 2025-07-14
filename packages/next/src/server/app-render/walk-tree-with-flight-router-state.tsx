@@ -111,7 +111,7 @@ export async function walkTreeWithFlightRouterState({
     // Explicit refresh
     flightRouterState[3] === 'refetch'
 
-  // Pre-PPR, the `loading` component signals to the router how deep to render the component tree
+  // Pre-Cache Components, the `loading` component signals to the router how deep to render the component tree
   // to ensure prefetches are quick and inexpensive. If there's no `loading` component anywhere in the tree being rendered,
   // the prefetch will be short-circuited to avoid requesting a potentially very expensive subtree. If there's a `loading`
   // somewhere in the tree, we'll recursively render the component tree up until we encounter that loading component, and then stop.
@@ -133,8 +133,8 @@ export async function walkTreeWithFlightRouterState({
 
   if (
     isInsideSharedLayout &&
-    !experimental.isRoutePPREnabled &&
-    // If PPR is disabled, and this is a request for the route tree, then we
+    !experimental.cacheComponents &&
+    // If Cache Components is disabled, and this is a request for the route tree, then we
     // never render any components. Only send the router state.
     (parsedRequestHeaders.isRouteTreePrefetchRequest ||
       // Otherwise, check for the presence of a `loading` component.

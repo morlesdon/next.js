@@ -64,7 +64,6 @@ export function useFlightStream<T>(
         flightResponses.set(flightStream, responseOnNextTick)
         return responseOnNextTick
       case 'prerender':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'request':
       case 'cache':

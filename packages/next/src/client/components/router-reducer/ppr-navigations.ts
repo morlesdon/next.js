@@ -87,7 +87,7 @@ export type Task = SPANavigationTask | MPANavigationTask
 //
 // A return value of `null` means there were no changes, and the previous tree
 // can be reused without initiating a server request.
-export function startPPRNavigation(
+export function startCacheComponentsNavigation(
   navigatedAt: number,
   oldCacheNode: CacheNode,
   oldRouterState: FlightRouterState,
@@ -741,8 +741,8 @@ function spawnReusedTask(reusedRouterState: FlightRouterState): Task {
 // `null` to indicate that the data is missing.
 //
 // A `null` value will trigger a lazy fetch during render, which will then patch
-// up the tree using the same mechanism as the non-PPR implementation
-// (serverPatchReducer).
+// up the tree using the same mechanism as the non-cache components
+// implementation (serverPatchReducer).
 //
 // Usually, the server will respond with exactly the subset of data that we're
 // waiting for — everything below the nearest shared layout. But technically,
@@ -771,9 +771,9 @@ export function listenForDynamicRequest(
         } = normalizedFlightData
 
         if (!dynamicData) {
-          // This shouldn't happen. PPR should always send back a response.
-          // However, `FlightDataPath` is a shared type and the pre-PPR handling of
-          // this might return null.
+          // This shouldn't happen. cache components should always send back a
+          // response. However, `FlightDataPath` is a shared type and the
+          // pre-cache components handling of this might return null.
           continue
         }
 
@@ -1179,12 +1179,12 @@ export function updateCacheNodeOnPopstateRestoration(
   // A popstate navigation reads data from the local cache. It does not issue
   // new network requests (unless the cache entries have been evicted). So, we
   // update the cache to drop the prefetch data for any segment whose dynamic
-  // data was already received. This prevents an unnecessary flash back to PPR
-  // state during a back/forward navigation.
+  // data was already received. This prevents an unnecessary flash back to cache
+  // components state during a back/forward navigation.
   //
   // This function clones the entire cache node tree and sets the `prefetchRsc`
-  // field to `null` to prevent it from being rendered. We can't mutate the node
-  // in place because this is a concurrent data structure.
+  // field to `null` to prevent it from being rendered. We can't mutate the
+  // node in place because this is a concurrent data structure.
 
   const routerStateChildren = routerState[1]
   const oldParallelRoutes = oldCacheNode.parallelRoutes
@@ -1268,7 +1268,8 @@ type DeferredRsc =
 
 // This type exists to distinguish a DeferredRsc from a Flight promise. It's a
 // compromise to avoid adding an extra field on every Cache Node, which would be
-// awkward because the pre-PPR parts of codebase would need to account for it,
+// awkward because the pre-cache components parts of codebase would need to
+// account for it, too.
 // too. We can remove it once type Cache Node type is more settled.
 function isDeferredRsc(value: any): value is DeferredRsc {
   return value && value.tag === DEFERRED

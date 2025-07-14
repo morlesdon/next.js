@@ -22,11 +22,11 @@ export function restoreReducer(
   const treeToRestore = tree || state.tree
 
   const oldCache = state.cache
-  const newCache = process.env.__NEXT_PPR
-    ? // When PPR is enabled, we update the cache to drop the prefetch
-      // data for any segment whose dynamic data was already received. This
-      // prevents an unnecessary flash back to PPR state during a
-      // back/forward navigation.
+  const newCache = process.env.__NEXT_CACHE_COMPONENTS
+    ? // When Cache Components is enabled, we update the cache to drop the
+      // prefetch data for any segment whose dynamic data was already received.
+      // This prevents an unnecessary flash back to cache components state during
+      // a back/forward navigation.
       updateCacheNodeOnPopstateRestoration(oldCache, treeToRestore)
     : oldCache
 

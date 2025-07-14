@@ -11,7 +11,7 @@ import { PrefetchPriority } from '../segment-cache'
  * @param nextUrl - A special header used by the server for interception routes.
  * Roughly corresponds to the current URL.
  * @param treeAtTimeOfPrefetch - The FlightRouterState at the time the prefetch
- * was requested. This is only used when PPR is disabled.
+ * was requested. This is only used when cache components is disabled.
  * @param includeDynamicData - Whether to prefetch dynamic data, in addition to
  * static data. This is used by <Link prefetch={true}>.
  * @param onInvalidate - A callback that will be called when the prefetch cache

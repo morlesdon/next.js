@@ -30,14 +30,6 @@ export default function MixedFetchStrategies() {
             </li>
           </ul>
         </li>
-        <li>
-          <LinkAccordion
-            id="ppr-disabled"
-            href="/mixed-fetch-strategies/has-loading-boundary/a/b/shared-layout/ppr-disabled"
-          >
-            Link to PPR disabled page
-          </LinkAccordion>
-        </li>
       </ul>
     </>
   )

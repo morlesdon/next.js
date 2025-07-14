@@ -11,9 +11,9 @@ import type {
 import type { NormalizedFlightData } from '../../flight-data-helpers'
 import { fetchServerResponse } from '../router-reducer/fetch-server-response'
 import {
-  startPPRNavigation,
+  startCacheComponentsNavigation,
   listenForDynamicRequest,
-  type Task as PPRNavigationTask,
+  type Task as CacheComponentsNavigationTask,
 } from '../router-reducer/ppr-navigations'
 import { createHrefFromUrl as createCanonicalUrl } from '../router-reducer/create-href-from-url'
 import {
@@ -176,7 +176,7 @@ function navigateUsingPrefetchedRouteTree(
   // read from the Segment Cache directly. It's only structured this way for now
   // so we can share code with the old prefetching implementation.
   const scrollableSegments: Array<FlightSegmentPath> = []
-  const task = startPPRNavigation(
+  const task = startCacheComponentsNavigation(
     now,
     currentCacheNode,
     currentFlightRouterState,
@@ -223,7 +223,7 @@ function navigateUsingPrefetchedRouteTree(
 }
 
 function navigationTaskToResult(
-  task: PPRNavigationTask,
+  task: CacheComponentsNavigationTask,
   currentCacheNode: CacheNode,
   canonicalUrl: string,
   scrollableSegments: Array<FlightSegmentPath>,
@@ -405,7 +405,7 @@ async function navigateDynamicallyWithNoPrefetch(
 
   // Now we proceed exactly as we would for normal navigation.
   const scrollableSegments: Array<FlightSegmentPath> = []
-  const task = startPPRNavigation(
+  const task = startCacheComponentsNavigation(
     now,
     currentCacheNode,
     currentFlightRouterState,
@@ -418,7 +418,7 @@ async function navigateDynamicallyWithNoPrefetch(
   )
   if (task !== null) {
     // In this case, we've already sent the dynamic request, so we don't
-    // actually use the request tree created by `startPPRNavigation`,
+    // actually use the request tree created by `startCacheComponentsNavigation`,
     // except to check if it contains dynamic holes.
     //
     // This is almost always true, but it could be false if all the segment data

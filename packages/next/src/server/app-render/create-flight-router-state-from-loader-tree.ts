@@ -51,7 +51,7 @@ function createFlightRouterStateFromLoaderTreeImpl(
     // data prefetch response will be empty, so there's no reason to request it.
     // NOTE: It would be better to accumulate this while building the loader
     // tree so we don't have to keep re-deriving it, but since this won't be
-    // once PPR is enabled everywhere, it's not that important.
+    // once Cache Components is enabled everywhere, it's not that important.
     segmentTree[5] = loading
       ? HasLoadingBoundary.SegmentHasLoadingBoundary
       : childHasLoadingBoundary

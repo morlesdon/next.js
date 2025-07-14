@@ -46,8 +46,8 @@ export type PrefetchTask = {
 
   /**
    * The FlightRouterState at the time the task was initiated. This is needed
-   * when falling back to the non-PPR behavior, which only prefetches up to
-   * the first loading boundary.
+   * when falling back to the non-cache components behavior, which only
+   * prefetches up to the first loading boundary.
    */
   treeAtTimeOfPrefetch: FlightRouterState
 
@@ -499,7 +499,8 @@ function pingRootRouteTree(
       //
       // There's also <Link prefetch={true}> which prefetches both static *and*
       // dynamic data. Similarly, we need to fallback to the old, per-page
-      // behavior if PPR is disabled for a route (via the incremental opt-in).
+      // behavior if cache components is disabled for a route (via the
+      // incremental opt-in).
       //
       // Those cases will be handled here.
       spawnPrefetchSubtask(fetchRouteOnCacheMiss(route, task))
@@ -548,16 +549,16 @@ function pingRootRouteTree(
       // Determine which fetch strategy to use for this prefetch task.
       const fetchStrategy = task.includeDynamicData
         ? FetchStrategy.Full
-        : route.isPPREnabled
-          ? FetchStrategy.PPR
+        : route.isCacheComponentsEnabled
+          ? FetchStrategy.CacheComponents
           : FetchStrategy.LoadingBoundary
 
       switch (fetchStrategy) {
-        case FetchStrategy.PPR:
+        case FetchStrategy.CacheComponents:
           // Individually prefetch the static shell for each segment. This is
-          // the default prefetching behavior for static routes, or when PPR is
-          // enabled. It will not include any dynamic data.
-          return pingPPRRouteTree(now, task, route, tree)
+          // the default prefetching behavior for static routes, or when Cache
+          // Components is enabled. It will not include any dynamic data.
+          return pingCacheComponentsRouteTree(now, task, route, tree)
         case FetchStrategy.Full:
         case FetchStrategy.LoadingBoundary: {
           // Prefetch multiple segments using a single dynamic request.
@@ -599,7 +600,7 @@ function pingRootRouteTree(
   return PrefetchTaskExitStatus.Done
 }
 
-function pingPPRRouteTree(
+function pingCacheComponentsRouteTree(
   now: number,
   task: PrefetchTask,
   route: FulfilledRouteCacheEntry,
@@ -615,7 +616,12 @@ function pingPPRRouteTree(
     // Recursively ping the children.
     for (const parallelRouteKey in tree.slots) {
       const childTree = tree.slots[parallelRouteKey]
-      const childExitStatus = pingPPRRouteTree(now, task, route, childTree)
+      const childExitStatus = pingCacheComponentsRouteTree(
+        now,
+        task,
+        route,
+        childTree
+      )
       if (childExitStatus === PrefetchTaskExitStatus.InProgress) {
         // Child yielded without finishing.
         return PrefetchTaskExitStatus.InProgress
@@ -676,12 +682,12 @@ function diffRouteTreeAgainstCurrent(
         // already cached).
         switch (fetchStrategy) {
           case FetchStrategy.LoadingBoundary: {
-            // When PPR is disabled, we can't prefetch per segment. We must
-            // fallback to the old prefetch behavior and send a dynamic request.
-            // Only routes that include a loading boundary can be prefetched in
-            // this way.
+            // When Cache Components is disabled, we can't prefetch per segment.
+            // We must fallback to the old prefetch behavior and send a dynamic
+            // request. Only routes that include a loading boundary can be
+            // prefetched in this way.
             //
-            // This is simlar to a "full" prefetch, but we're much more
+            // This is similar to a "full" prefetch, but we're much more
             // conservative about which segments to include in the request.
             //
             // The server will only render up to the first loading boundary
@@ -692,7 +698,7 @@ function diffRouteTreeAgainstCurrent(
               newTreeChild.hasLoadingBoundary !==
               HasLoadingBoundary.SubtreeHasNoLoadingBoundary
             const requestTreeChild = subtreeHasLoadingBoundary
-              ? pingPPRDisabledRouteTreeUpToLoadingBoundary(
+              ? pingCacheComponentsDisabledRouteTreeUpToLoadingBoundary(
                   now,
                   task,
                   route,
@@ -750,7 +756,7 @@ function diffRouteTreeAgainstCurrent(
   return requestTree
 }
 
-function pingPPRDisabledRouteTreeUpToLoadingBoundary(
+function pingCacheComponentsDisabledRouteTreeUpToLoadingBoundary(
   now: number,
   task: PrefetchTask,
   route: FulfilledRouteCacheEntry,
@@ -812,9 +818,9 @@ function pingPPRDisabledRouteTreeUpToLoadingBoundary(
         // path. We can bail out.
         return convertRouteTreeToFlightRouterState(tree)
       }
-      // NOTE: If the cached segment were fetched using PPR, then it might be
-      // partial. We could get a more complete version of the segment by
-      // including it in this non-PPR request.
+      // NOTE: If the cached segment were fetched using cache components, then
+      // it might be partial. We could get a more complete version of the
+      // segment by including it in this non-cache components request.
       //
       // We're intentionally choosing not to, though, because it's generally
       // better to avoid doing a dynamic prefetch whenever possible.
@@ -838,7 +844,7 @@ function pingPPRDisabledRouteTreeUpToLoadingBoundary(
     for (const parallelRouteKey in tree.slots) {
       const childTree = tree.slots[parallelRouteKey]
       requestTreeChildren[parallelRouteKey] =
-        pingPPRDisabledRouteTreeUpToLoadingBoundary(
+        pingCacheComponentsDisabledRouteTreeUpToLoadingBoundary(
           now,
           task,
           route,
@@ -966,7 +972,7 @@ function pingPerSegment(
       spawnPrefetchSubtask(
         fetchSegmentOnCacheMiss(
           route,
-          upgradeToPendingSegment(segment, FetchStrategy.PPR),
+          upgradeToPendingSegment(segment, FetchStrategy.CacheComponents),
           routeKey,
           segmentKey
         )
@@ -976,7 +982,7 @@ function pingPerSegment(
       // There's already a request in progress. Depending on what kind of
       // request it is, we may want to revalidate it.
       switch (segment.fetchStrategy) {
-        case FetchStrategy.PPR:
+        case FetchStrategy.CacheComponents:
         case FetchStrategy.Full:
           // There's already a request in progress. Don't do anything.
           break
@@ -989,7 +995,7 @@ function pingPerSegment(
           if (background(task)) {
             // TODO: Instead of speculatively revalidating, consider including
             // `hasLoading` in the route tree prefetch response.
-            pingPPRSegmentRevalidation(
+            pingCacheComponentsSegmentRevalidation(
               now,
               task,
               segment,
@@ -1008,7 +1014,7 @@ function pingPerSegment(
       // The existing entry in the cache was rejected. Depending on how it
       // was originally fetched, we may or may not want to revalidate it.
       switch (segment.fetchStrategy) {
-        case FetchStrategy.PPR:
+        case FetchStrategy.CacheComponents:
         case FetchStrategy.Full:
           // The previous attempt to fetch this entry failed. Don't attempt to
           // fetch it again until the entry expires.
@@ -1023,7 +1029,7 @@ function pingPerSegment(
           // Because a rejected segment will definitely prevent the segment (and
           // all of its children) from rendering, we perform this revalidation
           // immediately instead of deferring it to a background task.
-          pingPPRSegmentRevalidation(
+          pingCacheComponentsSegmentRevalidation(
             now,
             task,
             segment,
@@ -1049,7 +1055,7 @@ function pingPerSegment(
   // entry, which is handled by `fetchSegmentOnCacheMiss`).
 }
 
-function pingPPRSegmentRevalidation(
+function pingCacheComponentsSegmentRevalidation(
   now: number,
   task: PrefetchTask,
   currentSegment: SegmentCacheEntry,
@@ -1072,7 +1078,10 @@ function pingPPRSegmentRevalidation(
         spawnPrefetchSubtask(
           fetchSegmentOnCacheMiss(
             route,
-            upgradeToPendingSegment(revalidatingSegment, FetchStrategy.PPR),
+            upgradeToPendingSegment(
+              revalidatingSegment,
+              FetchStrategy.CacheComponents
+            ),
             routeKey,
             segmentKey
           )

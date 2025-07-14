@@ -45,6 +45,7 @@ export interface CacheHandlerContext {
   fetchCacheKeyPrefix?: string
   prerenderManifest?: PrerenderManifest
   revalidatedTags: string[]
+  cacheComponents: boolean | undefined
   _requestHeaders: IncrementalCache['requestHeaders']
 }
 
@@ -114,6 +115,7 @@ export class IncrementalCache implements IncrementalCacheType {
     fetchCacheKeyPrefix,
     CurCacheHandler,
     allowedRevalidateHeaderKeys,
+    cacheComponents,
   }: {
     fs?: CacheFs
     dev: boolean
@@ -126,6 +128,7 @@ export class IncrementalCache implements IncrementalCacheType {
     getPrerenderManifest: () => DeepReadonly<PrerenderManifest>
     fetchCacheKeyPrefix?: string
     CurCacheHandler?: typeof CacheHandler
+    cacheComponents?: boolean
   }) {
     this.hasCustomCacheHandler = Boolean(CurCacheHandler)
 
@@ -195,6 +198,7 @@ export class IncrementalCache implements IncrementalCacheType {
         maxMemoryCacheSize,
         _requestHeaders: requestHeaders,
         fetchCacheKeyPrefix,
+        cacheComponents,
       })
     }
   }

@@ -22,11 +22,6 @@ export interface ResponseCacheBase {
        * True if this is a fallback request.
        */
       isFallback?: boolean
-
-      /**
-       * True if the route is enabled for PPR.
-       */
-      isRoutePPREnabled?: boolean
     }
   ): Promise<ResponseCacheEntry | null>
 }
@@ -211,11 +206,6 @@ export interface GetIncrementalResponseCacheContext {
   kind: Exclude<IncrementalCacheKind, IncrementalCacheKind.FETCH>
 
   /**
-   * True if the route is enabled for PPR.
-   */
-  isRoutePPREnabled?: boolean
-
-  /**
    * True if this is a fallback request.
    */
   isFallback: boolean
@@ -232,11 +222,6 @@ export interface SetIncrementalFetchCacheContext {
 export interface SetIncrementalResponseCacheContext {
   fetchCache?: false
   cacheControl?: CacheControl
-
-  /**
-   * True if the route is enabled for PPR.
-   */
-  isRoutePPREnabled?: boolean
 
   /**
    * True if this is a fallback request.

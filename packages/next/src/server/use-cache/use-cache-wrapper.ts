@@ -174,7 +174,6 @@ function generateCacheEntryWithCacheContext(
         break
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'unstable-cache':
         break
@@ -228,7 +227,6 @@ function propagateCacheLifeAndTags(
     switch (workUnitStore.type) {
       case 'cache':
       case 'prerender':
-      case 'prerender-ppr':
       case 'prerender-legacy':
         // Propagate tags and revalidate upwards
         const outerTags = workUnitStore.tags ?? (workUnitStore.tags = [])
@@ -404,7 +402,6 @@ async function generateCacheEntryImpl(
                     })
                     break
                   case 'prerender-client':
-                  case 'prerender-ppr':
                   case 'prerender-legacy':
                   case 'request':
                   case 'cache':
@@ -534,7 +531,6 @@ async function generateCacheEntryImpl(
       }
       break
     case 'prerender-client':
-    case 'prerender-ppr':
     case 'prerender-legacy':
     case 'request':
     case 'cache':
@@ -830,7 +826,6 @@ export function cache(
           }
         // fallthrough
         case 'prerender-client':
-        case 'prerender-ppr':
         case 'prerender-legacy':
         case 'request':
         case 'cache':
@@ -891,7 +886,6 @@ export function cache(
                   'dynamic "use cache"'
                 )
               case 'prerender-client':
-              case 'prerender-ppr':
               case 'prerender-legacy':
               case 'request':
               case 'cache':
@@ -942,7 +936,6 @@ export function cache(
                 }
                 break
               case 'prerender-client':
-              case 'prerender-ppr':
               case 'prerender-legacy':
               case 'request':
               case 'cache':
@@ -1034,7 +1027,6 @@ export function cache(
                 'dynamic "use cache"'
               )
             case 'prerender-client':
-            case 'prerender-ppr':
             case 'prerender-legacy':
             case 'request':
             case 'cache':
@@ -1269,7 +1261,6 @@ function shouldForceRevalidate(
         return workUnitStore.forceRevalidate
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'unstable-cache':
         break

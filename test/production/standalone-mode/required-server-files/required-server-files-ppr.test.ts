@@ -46,7 +46,7 @@ describe('required server files app router', () => {
       nextConfig: {
         cacheHandler: './cache-handler.js',
         experimental: {
-          ppr: true,
+          cacheComponents: true,
         },
         eslint: {
           ignoreDuringBuilds: true,
@@ -126,7 +126,7 @@ describe('required server files app router', () => {
   })
 
   // this enables client segment cache in CI
-  if (process.env.__NEXT_EXPERIMENTAL_PPR) {
+  if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS) {
     it('should de-dupe client segment tree revalidate requests', async () => {
       const { segmentPaths } = await next.readJSON(
         'standalone/.next/server/app/isr/first.meta'

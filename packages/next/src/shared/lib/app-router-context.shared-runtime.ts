@@ -32,8 +32,8 @@ export type LazyCacheNode = {
    * If the app attempts to render it, it triggers a lazy data fetch,
    * postpones the render, and schedules an update to a new tree.
    *
-   * TODO: This mechanism should not be used when PPR is enabled, though it
-   * currently is in some cases until we've implemented partial
+   * TODO: This mechanism should not be used when Cache Components is enabled,
+   * though it currently is in some cases until we've implemented partial
    * segment fetching.
    */
   rsc: null
@@ -42,10 +42,11 @@ export type LazyCacheNode = {
    * A prefetched version of the segment data. See explanation in corresponding
    * field of ReadyCacheNode (below).
    *
-   * Since LazyCacheNode mostly only exists in the non-PPR implementation, this
-   * will usually be null, but it could have been cloned from a previous
-   * CacheNode that was created by the PPR implementation. Eventually we want
-   * to migrate everything away from LazyCacheNode entirely.
+   * Since LazyCacheNode mostly only exists in the non-Cache Components
+   * implementation, this will usually be null, but it could have been cloned
+   * from a previous CacheNode that was created by the Cache Components
+   * implementation. Eventually we want to migrate everything away from
+   * LazyCacheNode entirely.
    */
   prefetchRsc: React.ReactNode
 

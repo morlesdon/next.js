@@ -5,5 +5,3 @@ export default async function Page() {
 
   return <div>/prefetch-tests/[id]</div>
 }
-
-export const experimental_ppr = true

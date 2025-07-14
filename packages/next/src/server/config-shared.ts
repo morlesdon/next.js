@@ -11,7 +11,6 @@ import type { WEB_VITALS } from '../shared/lib/utils'
 import type { NextParsedUrlQuery } from './request-meta'
 import type { SizeLimit } from '../types'
 import type { SupportedTestRunners } from '../cli/next-test'
-import type { ExperimentalPPRConfig } from './lib/experimental/ppr'
 import { INFINITE_CACHE } from '../lib/constants'
 import type {
   ManifestRewriteRoute,
@@ -559,10 +558,9 @@ export interface ExperimentalConfig {
   clientTraceMetadata?: string[]
 
   /**
-   * Enables experimental Partial Prerendering feature of Next.js.
-   * Using this feature will enable the `react@experimental` for the `app` directory.
+   * @deprecated Use `cacheComponents` instead.
    */
-  ppr?: ExperimentalPPRConfig
+  ppr?: boolean | 'incremental'
 
   /**
    * Enables experimental taint APIs in React.
@@ -827,11 +825,6 @@ export type ExportPathMap = {
      * @internal
      */
     _isDynamicError?: boolean
-
-    /**
-     * @internal
-     */
-    _isRoutePPREnabled?: boolean
 
     /**
      * When true, the page is prerendered as a fallback shell, while allowing
@@ -1404,16 +1397,17 @@ export const defaultConfig = {
     caseSensitiveRoutes: false,
     clientSegmentCache:
       // TODO: Remove once we've made clientSegmentCache the default. We're
-      // piggybacking on the PPR test flag, instead of introducing a separate
+      // piggybacking on the cache components test flag, instead of introducing
+      // a separate
       // CI run.
       //
-      // If we're testing, and the `__NEXT_EXPERIMENTAL_PPR` environment
-      // variable has been set to `true`, enable the experimental
+      // If we're testing, and the `__NEXT_EXPERIMENTAL_CACHE_COMPONENTS`
+      // environment variable has been set to `true`, enable the experimental
       // clientSegmentCache feature so long as it wasn't explicitly disabled in
       // the config.
       !!(
         process.env.__NEXT_TEST_MODE &&
-        process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
+        process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
       ),
     dynamicOnHover: false,
     appDocumentPreloading: undefined,
@@ -1459,15 +1453,6 @@ export const defaultConfig = {
     clientTraceMetadata: undefined,
     parallelServerCompiles: false,
     parallelServerBuildTraces: false,
-    ppr:
-      // TODO: remove once we've made PPR default
-      // If we're testing, and the `__NEXT_EXPERIMENTAL_PPR` environment variable
-      // has been set to `true`, enable the experimental PPR feature so long as it
-      // wasn't explicitly disabled in the config.
-      !!(
-        process.env.__NEXT_TEST_MODE &&
-        process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
-      ),
     authInterrupts: false,
     webpackBuildWorker: undefined,
     webpackMemoryOptimizations: false,

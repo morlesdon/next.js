@@ -3,17 +3,11 @@ import type { NextConfigComplete } from '../config-shared'
 import '../require-hook'
 import '../node-environment'
 
-import { reduceAppConfig } from '../../build/utils'
 import { collectSegments } from '../../build/segment-config/app/app-segments'
 import type { StaticPathsResult } from '../../build/static-paths/types'
 import { loadComponents } from '../load-components'
 import { setHttpClientAndAgentOptions } from '../setup-http-agent-env'
 import type { IncrementalCache } from '../lib/incremental-cache'
-import { isAppPageRouteModule } from '../route-modules/checks'
-import {
-  checkIsRoutePPREnabled,
-  type ExperimentalPPRConfig,
-} from '../lib/experimental/ppr'
 import { InvariantError } from '../../shared/lib/invariant-error'
 import { collectRootParamKeys } from '../../build/segment-config/app/collect-root-param-keys'
 import { buildAppStaticPaths } from '../../build/static-paths/app'
@@ -21,7 +15,6 @@ import { buildPagesStaticPaths } from '../../build/static-paths/pages'
 import { createIncrementalCache } from '../../export/helpers/create-incremental-cache'
 
 type RuntimeConfig = {
-  pprConfig: ExperimentalPPRConfig | undefined
   configFileName: string
   publicRuntimeConfig: { [key: string]: any }
   serverRuntimeConfig: { [key: string]: any }
@@ -109,10 +102,6 @@ export async function loadStaticPaths({
   if (isAppPath) {
     const segments = await collectSegments(components)
 
-    const isRoutePPREnabled =
-      isAppPageRouteModule(components.routeModule) &&
-      checkIsRoutePPREnabled(config.pprConfig, reduceAppConfig(segments))
-
     const rootParamKeys = collectRootParamKeys(components)
 
     return buildAppStaticPaths({
@@ -129,7 +118,6 @@ export async function loadStaticPaths({
       maxMemoryCacheSize,
       ComponentMod: components.ComponentMod,
       nextConfigOutput,
-      isRoutePPREnabled,
       buildId,
       authInterrupts,
       rootParamKeys,

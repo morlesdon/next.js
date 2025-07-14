@@ -13,7 +13,6 @@ export function bailoutToClientRendering(reason: string): void | never {
     switch (workUnitStore.type) {
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
         throw new BailoutToCSRError(reason)
       case 'request':

@@ -2,7 +2,7 @@ import { nextTestSetup } from 'e2e-utils'
 import { join } from 'path'
 import { createSandbox } from 'development-sandbox'
 
-const isPPREnabled = process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
+const isPPREnabled = process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
 
 describe('app-root-params - cache - at runtime', () => {
   const { next, isNextDev, skipped } = nextTestSetup({

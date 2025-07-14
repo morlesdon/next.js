@@ -1,6 +1,7 @@
 import { nextTestSetup } from 'e2e-utils'
 
-const isPPREnabled = process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
+const isCacheComponentsEnabled =
+  process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
 
 describe('app dir - not-found - default', () => {
   const { next, isNextStart } = nextTestSetup({
@@ -17,7 +18,7 @@ describe('app dir - not-found - default', () => {
     it('should contain noindex contain in the page', async () => {
       const html = await next.readFile('.next/server/app/_not-found.html')
       const rsc = await next.readFile(
-        `.next/server/app/_not-found.${isPPREnabled ? 'prefetch.' : ''}rsc`
+        `.next/server/app/_not-found.${isCacheComponentsEnabled ? 'prefetch.' : ''}rsc`
       )
 
       expect(html).toContain('noindex')

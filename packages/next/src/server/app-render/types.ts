@@ -88,8 +88,8 @@ export type FlightRouterState = [
    *   need to render it, because the client already has it.
    *
    *   A bit confusing, but that's because it has only one extremely narrow use
-   *   case — during a non-PPR prefetch, the server uses it to find the first
-   *   loading boundary beneath a shared layout.
+   *   case — during a non-Cache Components prefetch, the server uses it to find
+   *   the first loading boundary beneath a shared layout.
    *
    *   TODO: We should rethink the protocol for dynamic requests. It might not
    *   make sense for the client to send a FlightRouterState, since this type is
@@ -227,11 +227,6 @@ export interface RenderOptsPartial {
   isPrefetch?: boolean
   htmlLimitedBots: string | undefined
   experimental: {
-    /**
-     * When true, it indicates that the current page supports partial
-     * prerendering.
-     */
-    isRoutePPREnabled?: boolean
     expireTime: number | undefined
     staleTimes: ExperimentalConfig['staleTimes'] | undefined
     clientTraceMetadata: string[] | undefined

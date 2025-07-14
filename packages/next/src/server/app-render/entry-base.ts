@@ -39,7 +39,6 @@ export {
 } from '../../client/components/metadata/metadata-boundary'
 
 export { preloadStyle, preloadFont, preconnect } from './rsc/preloads'
-export { Postpone } from './rsc/postpone'
 export { taintObjectReference } from './rsc/taint'
 export { collectSegmentData } from './collect-segment-data'
 

@@ -477,7 +477,7 @@ describe('use-cache', () => {
 
       let prerenderedRoutes = Object.keys(prerenderManifest.routes).sort()
 
-      if (process.env.__NEXT_EXPERIMENTAL_PPR === 'true') {
+      if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true') {
         // For the purpose of this test we don't consider an incomplete shell.
         prerenderedRoutes = prerenderedRoutes.filter((route) => {
           const filename = route.replace(/^\//, '').replace(/^$/, 'index')
@@ -536,7 +536,7 @@ describe('use-cache', () => {
       // config for the page.
       expect(routes['/cache-tag'].initialRevalidateSeconds).toBe(42)
 
-      if (process.env.__NEXT_EXPERIMENTAL_PPR === 'true') {
+      if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true') {
         // cache life profile "weeks"
         expect(dynamicRoutes['/[id]'].fallbackRevalidate).toBe(604800)
         expect(dynamicRoutes['/[id]'].fallbackExpire).toBe(2592000)
@@ -938,7 +938,10 @@ describe('use-cache', () => {
     })
   }
 
-  if (isNextStart && process.env.__NEXT_EXPERIMENTAL_PPR === 'true') {
+  if (
+    isNextStart &&
+    process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
+  ) {
     it('should exclude inner caches from the resume data cache (RDC)', async () => {
       await next.fetch('/rdc')
 

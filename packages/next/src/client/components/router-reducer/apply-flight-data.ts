@@ -24,11 +24,12 @@ export function applyFlightData(
     const loading = seedData[3]
     cache.loading = loading
     cache.rsc = rsc
-    // This is a PPR-only field. When PPR is enabled, we shouldn't hit
-    // this path during a navigation, but until PPR is fully implemented
-    // yet it's possible the existing node does have a non-null
-    // `prefetchRsc`. As an incremental step, we'll just de-opt to the
-    // old behavior — no PPR value.
+    // This is a cache components-only field. When cache components is enabled,
+    // we shouldn't hit this path during a navigation, but until cache
+    // components is fully implemented yet it's possible the existing node does
+    // have a non-null `prefetchRsc`. As an incremental step, we'll just de-opt
+    // to the
+    // old behavior — no cache components value.
     cache.prefetchRsc = null
     fillLazyItemsTillLeafWithHead(
       navigatedAt,
@@ -42,9 +43,9 @@ export function applyFlightData(
   } else {
     // Copy rsc for the root node of the cache.
     cache.rsc = existingCache.rsc
-    // This is a PPR-only field. Unlike the previous branch, since we're
-    // just cloning the existing cache node, we might as well keep the
-    // PPR value, if it exists.
+    // This is a cache components-only field. Unlike the previous branch, since
+    // we're just cloning the existing cache node, we might as well keep the
+    // cache components value, if it exists.
     cache.prefetchRsc = existingCache.prefetchRsc
     cache.parallelRoutes = new Map(existingCache.parallelRoutes)
     cache.loading = existingCache.loading

@@ -402,12 +402,12 @@ async function isPartialRSCData(
 function createUnclosingPrefetchStream(
   originalFlightStream: ReadableStream<Uint8Array>
 ): ReadableStream<Uint8Array> {
-  // When PPR is enabled, prefetch streams may contain references that never
-  // resolve, because that's how we encode dynamic data access. In the decoded
-  // object returned by the Flight client, these are reified into hanging
-  // promises that suspend during render, which is effectively what we want.
-  // The UI resolves when it switches to the dynamic data stream
-  // (via useDeferredValue(dynamic, static)).
+  // When Cache Components is enabled, prefetch streams may contain references
+  // that never resolve, because that's how we encode dynamic data access. In
+  // the decoded object returned by the Flight client, these are reified into
+  // hanging promises that suspend during render, which is effectively what we
+  // want. The UI resolves when it switches to the dynamic data stream (via
+  // useDeferredValue(dynamic, static)).
   //
   // However, the Flight implementation currently errors if the server closes
   // the response before all the references are resolved. As a cheat to work

@@ -96,9 +96,11 @@ export async function exportAppPage(
       renderResumeDataCache,
     } = metadata
 
-    // Ensure we don't postpone without having PPR enabled.
-    if (postponed && !renderOpts.experimental.isRoutePPREnabled) {
-      throw new Error('Invariant: page postponed without PPR being enabled')
+    // Ensure we don't postpone without having cache components enabled.
+    if (postponed && !renderOpts.experimental.cacheComponents) {
+      throw new Error(
+        'Invariant: page postponed without cache components being enabled'
+      )
     }
 
     if (cacheControl.revalidate === 0) {
@@ -131,13 +133,13 @@ export async function exportAppPage(
     }
 
     if (flightData) {
-      // If PPR is enabled, we want to emit a prefetch rsc file for the page
-      // instead of the standard rsc. This is because the standard rsc will
-      // contain the dynamic data. We do this if any routes have PPR enabled so
-      // that the cache read/write is the same.
-      if (renderOpts.experimental.isRoutePPREnabled) {
-        // If PPR is enabled, we should emit the flight data as the prefetch
-        // payload.
+      // If cache components is enabled, we want to emit a prefetch rsc file
+      // for the page instead of the standard rsc. This is because the standard
+      // rsc will contain the dynamic data. We do this if any routes have cache
+      // components enabled so that the cache read/write is the same.
+      if (renderOpts.experimental.cacheComponents) {
+        // If cache components is enabled, we should emit the flight data as the
+        // prefetch payload.
         // TODO: This will eventually be replaced by the per-segment prefetch
         // output below.
         fileWriter.append(
@@ -145,7 +147,8 @@ export async function exportAppPage(
           flightData
         )
       } else {
-        // Writing the RSC payload to a file if we don't have PPR enabled.
+        // Writing the RSC payload to a file if we don't have cache components
+        // enabled.
         fileWriter.append(
           htmlFilepath.replace(/\.html$/, RSC_SUFFIX),
           flightData
@@ -187,10 +190,10 @@ export async function exportAppPage(
     const isParallelRoute = /\/@\w+/.test(page)
     const isNonSuccessfulStatusCode = res.statusCode > 300
 
-    // When PPR is enabled, we don't always send 200 for routes that have been
-    // pregenerated, so we should grab the status code from the mocked
-    // response.
-    let status: number | undefined = renderOpts.experimental.isRoutePPREnabled
+    // When cache components is enabled, we don't always send 200 for routes
+    // that have been pregenerated, so we should grab the status code from the
+    // mocked response.
+    let status: number | undefined = renderOpts.experimental.cacheComponents
       ? res.statusCode
       : undefined
 

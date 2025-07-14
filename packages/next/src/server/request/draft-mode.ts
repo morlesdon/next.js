@@ -12,7 +12,6 @@ import {
 import { workUnitAsyncStorage } from '../app-render/work-unit-async-storage.external'
 import {
   abortAndThrowOnSynchronousRequestDataAccess,
-  postponeWithTracking,
   trackDynamicDataInDynamicRender,
   trackSynchronousRequestDataAccessInDev,
 } from '../app-render/dynamic-rendering'
@@ -73,16 +72,9 @@ export function draftMode(): Promise<DraftMode> {
       }
 
     // Otherwise, we fall through to providing an empty draft mode.
-    // eslint-disable-next-line no-fallthrough
-    case 'prerender':
-    case 'prerender-client':
-    case 'prerender-ppr':
-    case 'prerender-legacy':
+    default:
       // Return empty draft mode
       return createOrGetCachedDraftMode(null, workStore)
-
-    default:
-      return workUnitStore satisfies never
   }
 }
 
@@ -256,7 +248,6 @@ function syncIODev(route: string | undefined, expression: string) {
         break
       case 'prerender':
       case 'prerender-client':
-      case 'prerender-ppr':
       case 'prerender-legacy':
       case 'cache':
       case 'unstable-cache':
@@ -328,12 +319,6 @@ function trackDynamicDraftMode(expression: string) {
           const exportName = '`draftMode`'
           throw new InvariantError(
             `${exportName} must not be used within a client component. Next.js should be preventing ${exportName} from being included in client components statically, but did not in this case.`
-          )
-        case 'prerender-ppr':
-          return postponeWithTracking(
-            store.route,
-            expression,
-            workUnitStore.dynamicTracking
           )
         case 'prerender-legacy':
           workUnitStore.revalidate = 0

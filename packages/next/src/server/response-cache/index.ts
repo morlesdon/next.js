@@ -42,7 +42,7 @@ export default class ResponseCache implements ResponseCacheBase {
   // we don't use minimal_mode name here as this.minimal_mode is
   // statically replace for server runtimes but we need it to
   // be dynamic here
-  private minimal_mode?: boolean
+  private readonly minimal_mode?: boolean
 
   constructor(minimal_mode: boolean) {
     this.minimal_mode = minimal_mode
@@ -56,7 +56,6 @@ export default class ResponseCache implements ResponseCacheBase {
       isOnDemandRevalidate?: boolean
       isPrefetch?: boolean
       incrementalCache: IncrementalResponseCache
-      isRoutePPREnabled?: boolean
       isFallback?: boolean
       waitUntil?: (prom: Promise<any>) => void
     }
@@ -71,7 +70,6 @@ export default class ResponseCache implements ResponseCacheBase {
       incrementalCache,
       isOnDemandRevalidate = false,
       isFallback = false,
-      isRoutePPREnabled = false,
       waitUntil,
     } = context
 
@@ -98,7 +96,6 @@ export default class ResponseCache implements ResponseCacheBase {
             cachedResponse = !this.minimal_mode
               ? await incrementalCache.get(key, {
                   kind,
-                  isRoutePPREnabled: context.isRoutePPREnabled,
                   isFallback,
                 })
               : null
@@ -157,7 +154,6 @@ export default class ResponseCache implements ResponseCacheBase {
               } else {
                 await incrementalCache.set(key, resolveValue.value, {
                   cacheControl: resolveValue.cacheControl,
-                  isRoutePPREnabled,
                   isFallback,
                 })
               }
@@ -183,7 +179,6 @@ export default class ResponseCache implements ResponseCacheBase {
 
               await incrementalCache.set(key, cachedResponse.value, {
                 cacheControl: { revalidate: newRevalidate, expire: newExpire },
-                isRoutePPREnabled,
                 isFallback,
               })
             }

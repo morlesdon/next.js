@@ -86,44 +86,4 @@ describe('segment cache prefetch scheduling', () => {
     const dynamicContent = await browser.elementById('dynamic-content')
     expect(await dynamicContent.innerHTML()).toBe('Dynamic Content')
   })
-
-  it('prefetches a dynamic page (without PPR enabled)', async () => {
-    let act: ReturnType<typeof createRouterAct>
-    const browser = await next.browser('/', {
-      beforePageLoad(p: Playwright.Page) {
-        act = createRouterAct(p)
-      },
-    })
-
-    const linkVisibilityToggle = await browser.elementByCss(
-      'input[data-link-accordion="/dynamic-without-ppr"]'
-    )
-    await act(async () => {
-      await linkVisibilityToggle.click()
-    }, [
-      // This assertion will fail if this string appears in multiple requests.
-      {
-        includes: 'Loading dynamic content...',
-      },
-      // Does not include the dynamic content
-      {
-        block: 'reject',
-        includes: 'Dynamic Content',
-      },
-    ])
-
-    // When navigating to the prefetched dynamic page, an additional request
-    // is issued to fetch the dynamic content.
-    const link = await browser.elementByCss('a[href="/dynamic-without-ppr"]')
-    await act(
-      async () => {
-        await link.click()
-      },
-      {
-        includes: 'Dynamic Content',
-      }
-    )
-    const dynamicContent = await browser.elementById('dynamic-content')
-    expect(await dynamicContent.innerHTML()).toBe('Dynamic Content')
-  })
 })

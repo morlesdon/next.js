@@ -3,7 +3,7 @@
  */
 const nextConfig = {
   experimental: {
-    ppr: 'incremental',
+    cacheComponents: true,
     clientSegmentCache: true,
   },
 }

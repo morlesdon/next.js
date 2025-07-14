@@ -10,7 +10,8 @@ import {
 // TODO: We should decide on an established pattern for gating test assertions
 // on experimental flags. For example, as a first step we could all the common
 // gates like this one into a single module.
-const isPPREnabledByDefault = process.env.__NEXT_EXPERIMENTAL_PPR === 'true'
+const isPPREnabledByDefault =
+  process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS === 'true'
 
 describe('app dir - basic', () => {
   const { next, isNextDev, isNextStart, isNextDeploy, isTurbopack } =

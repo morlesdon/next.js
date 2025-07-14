@@ -37,9 +37,9 @@ export function getDigestForWellKnownError(error: unknown): string | undefined {
   if (isNextRouterError(error)) return error.digest
 
   // If this error occurs, we know that we should be stopping the static
-  // render. This is only thrown in static generation when PPR is not enabled,
-  // which causes the whole page to be marked as dynamic. We don't need to
-  // tell the user about this error, as it's not actionable.
+  // render. This is only thrown in static generation when Cache Components is
+  // not enabled, which causes the whole page to be marked as dynamic. We don't
+  // need to tell the user about this error, as it's not actionable.
   if (isDynamicServerError(error)) return error.digest
 
   // If this is a prerender interrupted error, we don't need to log the error.

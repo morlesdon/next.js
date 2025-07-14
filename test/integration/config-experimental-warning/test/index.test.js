@@ -147,14 +147,14 @@ describe('Config Experimental Warning', () => {
     configFile.write(`
       module.exports = {
         experimental: {
-          ppr: 'incremental'
+          clientSegmentCache: 'client-only'
         }
       }
     `)
 
     const stdout = await collectStdoutFromDev(appDir)
     expect(stdout).toMatch(experimentalHeader)
-    expect(stdout).toMatch(' · ppr: "incremental"')
+    expect(stdout).toMatch(' · clientSegmentCache: "client-only"')
   })
 
   it('should show warning with config from object with experimental and multiple keys', async () => {

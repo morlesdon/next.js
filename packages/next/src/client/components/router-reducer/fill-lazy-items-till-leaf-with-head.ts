@@ -32,9 +32,9 @@ export function fillLazyItemsTillLeafWithHead(
     // TODO: We should traverse the cacheNodeSeedData tree instead of the router
     // state tree. Ideally, they would always be the same shape, but because of
     // the loading.js pattern, cacheNodeSeedData sometimes only represents a
-    // partial tree. That's why this node is sometimes null. Once PPR lands,
-    // loading.js will no longer have special behavior and we can traverse the
-    // data tree instead.
+    // partial tree. That's why this node is sometimes null. Once cache
+    // components lands, loading.js will no longer have special behavior and we
+    // can traverse the data tree instead.
     //
     // We should also consider merging the router state tree and the data tree
     // in the response format, so that we don't have to send the keys twice.
@@ -61,11 +61,12 @@ export function fillLazyItemsTillLeafWithHead(
           newCacheNode = {
             lazyData: null,
             rsc: seedNode,
-            // This is a PPR-only field. When PPR is enabled, we shouldn't hit
-            // this path during a navigation, but until PPR is fully implemented
-            // yet it's possible the existing node does have a non-null
-            // `prefetchRsc`. As an incremental step, we'll just de-opt to the
-            // old behavior — no PPR value.
+            // This is a cache components-only field. When cache components is
+            // enabled, we shouldn't hit this path during a navigation, but
+            // until cache components is fully implemented yet it's possible the
+            // existing node does have a non-null `prefetchRsc`. As an
+            // incremental step, we'll just de-opt to the old behavior — no
+            // cache components value.
             prefetchRsc: null,
             head: null,
             prefetchHead: null,
@@ -79,9 +80,9 @@ export function fillLazyItemsTillLeafWithHead(
           newCacheNode = {
             lazyData: existingCacheNode.lazyData,
             rsc: existingCacheNode.rsc,
-            // This is a PPR-only field. Unlike the previous branch, since we're
-            // just cloning the existing cache node, we might as well keep the
-            // PPR value, if it exists.
+            // This is a cache components-only field. Unlike the previous
+            // branch, since we're just cloning the existing cache node, we
+            // might as well keep the cache components value, if it exists.
             prefetchRsc: existingCacheNode.prefetchRsc,
             head: existingCacheNode.head,
             prefetchHead: existingCacheNode.prefetchHead,

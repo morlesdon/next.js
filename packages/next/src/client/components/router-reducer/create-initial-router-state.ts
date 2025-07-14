@@ -44,7 +44,7 @@ export function createInitialRouterState({
     head: initialHead,
   } = normalizedFlightData
   // For the SSR render, seed data should always be available (we only send back a `null` response
-  // in the case of a `loading` segment, pre-PPR.)
+  // in the case of a `loading` segment, pre-cache components.)
   const rsc = initialSeedData?.[1]
   const loading = initialSeedData?.[3] ?? null
 
@@ -130,11 +130,11 @@ export function createInitialRouterState({
         prerendered,
         postponed,
         // TODO: The initial RSC payload includes both static and dynamic data
-        // in the same response, even if PPR is enabled. So if there's any
-        // dynamic data at all, we can't set a stale time. In the future we may
-        // add a way to split a single Flight stream into static and dynamic
-        // parts. But in the meantime we should at least make this work for
-        // fully static pages.
+        // in the same response, even if cache components is enabled. So if
+        // there's any dynamic data at all, we can't set a stale time. In the
+        // future we may add a way to split a single Flight stream into static
+        // and dynamic parts. But in the meantime we should at least make this
+        // work for fully static pages.
         staleTime:
           // In the old router, there was only a single configurable staleTime (experimental.staleTimes)
           // As an abundance of caution, this will only set the initial staleTime to the configured value

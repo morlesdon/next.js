@@ -1,8 +1,5 @@
 import { InvariantError } from '../../shared/lib/invariant-error'
-import {
-  postponeWithTracking,
-  throwToInterruptStaticGeneration,
-} from '../app-render/dynamic-rendering'
+import { throwToInterruptStaticGeneration } from '../app-render/dynamic-rendering'
 import {
   workAsyncStorage,
   type WorkStore,
@@ -11,7 +8,6 @@ import {
   workUnitAsyncStorage,
   type PrerenderStore,
   type PrerenderStoreLegacy,
-  type PrerenderStorePPR,
 } from '../app-render/work-unit-async-storage.external'
 import { makeHangingPromise } from '../dynamic-rendering-utils'
 import type { FallbackRouteParams } from './fallback-params'
@@ -47,7 +43,6 @@ export async function unstable_rootParams(): Promise<Params> {
     }
     case 'prerender':
     case 'prerender-client':
-    case 'prerender-ppr':
     case 'prerender-legacy':
       return createPrerenderRootParams(
         workUnitStore.rootParams,
@@ -98,7 +93,6 @@ function createPrerenderRootParams(
           throw new InvariantError(
             `${exportName} must not be used within a client component. Next.js should be preventing ${exportName} from being included in client components statically, but did not in this case.`
           )
-        case 'prerender-ppr':
         case 'prerender-legacy':
           // We aren't in a cacheComponents prerender but we do have fallback params at this
           // level so we need to make an erroring params object which will postpone
@@ -123,7 +117,7 @@ function makeErroringRootParams(
   underlyingParams: Params,
   fallbackParams: FallbackRouteParams,
   workStore: WorkStore,
-  prerenderStore: PrerenderStorePPR | PrerenderStoreLegacy
+  prerenderStore: PrerenderStoreLegacy
 ): Promise<Params> {
   const cachedParams = CachedParams.get(underlyingParams)
   if (cachedParams) {
@@ -156,21 +150,11 @@ function makeErroringRootParams(
             // fallback shells
             // TODO remove this comment when cacheComponents is the default since there
             // will be no `dynamic = "error"`
-            if (prerenderStore.type === 'prerender-ppr') {
-              // PPR Prerender (no cacheComponents)
-              postponeWithTracking(
-                workStore.route,
-                expression,
-                prerenderStore.dynamicTracking
-              )
-            } else {
-              // Legacy Prerender
-              throwToInterruptStaticGeneration(
-                expression,
-                workStore,
-                prerenderStore
-              )
-            }
+            throwToInterruptStaticGeneration(
+              expression,
+              workStore,
+              prerenderStore
+            )
           },
           enumerable: true,
         })

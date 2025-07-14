@@ -238,8 +238,8 @@ export default class NextWebServer extends BaseServer<
       res as any,
       pathname,
       query,
-      // Edge runtime does not support ISR/PPR, so we don't need to pass in
-      // the unknown params.
+      // Edge runtime does not support ISR/Cache Components, so we don't need to
+      // pass in the unknown params.
       null,
       Object.assign(renderOpts, {
         disableOptimizedLoading: true,

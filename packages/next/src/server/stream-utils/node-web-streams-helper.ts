@@ -329,7 +329,7 @@ function createHeadInsertionTransformStream(
       } else {
         // TODO (@Ethan-Arrowood): Replace the generic `indexOfUint8Array` method with something finely tuned for the subset of things actually being checked for.
         const index = indexOfUint8Array(chunk, ENCODED_TAGS.CLOSED.HEAD)
-        // In fully static rendering or non PPR rendering cases:
+        // In fully static rendering or non Cache Components rendering cases:
         // `/head>` will always be found in the chunk in first chunk rendering.
         if (index !== -1) {
           if (insertion) {
@@ -357,12 +357,12 @@ function createHeadInsertionTransformStream(
           }
           inserted = true
         } else {
-          // This will happens in PPR rendering during next start, when the page is partially rendered.
+          // This will happens in Cache Components rendering during next start, when the page is partially rendered.
           // When the page resumes, the head tag will be found in the middle of the chunk.
           // Where we just need to append the insertion and chunk to the current stream.
           // e.g.
-          // PPR-static: <head>...</head><body> [ resume content ] </body>
-          // PPR-resume: [ insertion ] [ rest content ]
+          // Cache Components-static: <head>...</head><body> [ resume content ] </body>
+          // Cache Components-resume: [ insertion ] [ rest content ]
           if (insertion) {
             controller.enqueue(encoder.encode(insertion))
           }

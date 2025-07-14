@@ -162,7 +162,6 @@ export function unstable_cache<T extends Callback>(
           switch (workUnitStore.type) {
             case 'cache':
             case 'prerender':
-            case 'prerender-ppr':
             case 'prerender-legacy':
               // We update the store's revalidate property if the option.revalidate is a higher precedence
               // options.revalidate === undefined doesn't affect timing.
@@ -383,7 +382,6 @@ function getFetchUrlPrefix(
       return `${pathname}${sortedSearch.length ? '?' : ''}${sortedSearch}`
     case 'prerender':
     case 'prerender-client':
-    case 'prerender-ppr':
     case 'prerender-legacy':
     case 'cache':
     case 'unstable-cache':

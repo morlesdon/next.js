@@ -116,7 +116,6 @@ async function createComponentTreeInternal({
       createServerParamsForServerSegment,
       createPrerenderParamsForClientSegment,
       serverHooks: { DynamicServerError },
-      Postpone,
     },
     pagePath,
     getDynamicParamFromSegment,
@@ -262,8 +261,8 @@ async function createComponentTreeInternal({
     } else if (dynamic === 'force-dynamic') {
       workStore.forceDynamic = true
 
-      // TODO: (PPR) remove this bailout once PPR is the default
-      if (workStore.isStaticGeneration && !experimental.isRoutePPREnabled) {
+      // TODO: (Cache Components) remove this bailout once Cache Components is the default
+      if (workStore.isStaticGeneration && !experimental.cacheComponents) {
         // If the postpone API isn't available, we can't postpone the render and
         // therefore we can't use the dynamic API.
         const err = new DynamicServerError(
@@ -296,7 +295,6 @@ async function createComponentTreeInternal({
       switch (workUnitStore.type) {
         case 'prerender':
         case 'prerender-legacy':
-        case 'prerender-ppr':
         case 'cache':
           if (workUnitStore.revalidate > defaultRevalidate) {
             workUnitStore.revalidate = defaultRevalidate
@@ -317,7 +315,7 @@ async function createComponentTreeInternal({
       defaultRevalidate === 0 &&
       // If the postpone API isn't available, we can't postpone the render and
       // therefore we can't use the dynamic API.
-      !experimental.isRoutePPREnabled
+      !experimental.cacheComponents
     ) {
       const dynamicUsageDescription = `revalidate: 0 configured ${segment}`
       workStore.dynamicUsageDescription = dynamicUsageDescription
@@ -328,7 +326,7 @@ async function createComponentTreeInternal({
 
   const isStaticGeneration = workStore.isStaticGeneration
 
-  // Assume the segment we're rendering contains only partial data if PPR is
+  // Assume the segment we're rendering contains only partial data if Cache Components is
   // enabled and this is a statically generated response. This is used by the
   // client Segment Cache after a prefetch to determine if it can skip the
   // second request to fill in the dynamic data.
@@ -342,7 +340,7 @@ async function createComponentTreeInternal({
   // For dynamic requests, this must always be `false` because dynamic responses
   // are never partial.
   const isPossiblyPartialResponse =
-    isStaticGeneration && experimental.isRoutePPREnabled === true
+    isStaticGeneration && experimental.cacheComponents
 
   const LayoutOrPage: React.ComponentType<any> | undefined = layoutOrPageMod
     ? interopDefault(layoutOrPageMod)
@@ -472,7 +470,7 @@ async function createComponentTreeInternal({
         let childCacheNodeSeedData: CacheNodeSeedData | null = null
 
         if (
-          // Before PPR, the way instant navigations work in Next.js is we
+          // Before Cache Components, the way instant navigations work in Next.js is we
           // prefetch everything up to the first route segment that defines a
           // loading.tsx boundary. (We do the same if there's no loading
           // boundary in the entire tree, because we don't want to prefetch too
@@ -481,28 +479,28 @@ async function createComponentTreeInternal({
           // the tree is completely static, it will still defer everything
           // inside the loading boundary.
           //
-          // This behavior predates PPR and is only relevant if the
-          // PPR flag is not enabled.
+          // This behavior predates Cache Components and is only relevant if the
+          // Cache Components flag is not enabled.
           isPrefetch &&
           (Loading || !hasLoadingComponentInTree(parallelRoute)) &&
-          // The approach with PPR is different — loading.tsx behaves like a
+          // The approach with Cache Components is different — loading.tsx behaves like a
           // regular Suspense boundary and has no special behavior.
           //
-          // With PPR, we prefetch as deeply as possible, and only defer when
+          // With Cache Components, we prefetch as deeply as possible, and only defer when
           // dynamic data is accessed. If so, we only defer the nearest parent
           // Suspense boundary of the dynamic data access, regardless of whether
           // the boundary is defined by loading.tsx or a normal <Suspense>
           // component in userspace.
           //
           // NOTE: In practice this usually means we'll end up prefetching more
-          // than we were before PPR, which may or may not be considered a
+          // than we were before Cache Components, which may or may not be considered a
           // performance regression by some apps. The plan is to address this
-          // before General Availability of PPR by introducing granular
+          // before General Availability of Cache Components by introducing granular
           // per-segment fetching, so we can reuse as much of the tree as
           // possible during both prefetches and dynamic navigations. But during
           // the beta period, we should be clear about this trade off in our
           // communications.
-          !experimental.isRoutePPREnabled
+          !experimental.cacheComponents
         ) {
           // Don't prefetch this child. This will trigger a lazy fetch by the
           // client router.
@@ -676,37 +674,6 @@ async function createComponentTreeInternal({
   }
 
   const Component = MaybeComponent
-  // If force-dynamic is used and the current render supports postponing, we
-  // replace it with a node that will postpone the render. This ensures that the
-  // postpone is invoked during the react render phase and not during the next
-  // render phase.
-  // @TODO this does not actually do what it seems like it would or should do. The idea is that
-  // if we are rendering in a force-dynamic mode and we can postpone we should only make the segments
-  // that ask for force-dynamic to be dynamic, allowing other segments to still prerender. However
-  // because this comes after the children traversal and the static generation store is mutated every segment
-  // along the parent path of a force-dynamic segment will hit this condition effectively making the entire
-  // render force-dynamic. We should refactor this function so that we can correctly track which segments
-  // need to be dynamic
-  if (
-    workStore.isStaticGeneration &&
-    workStore.forceDynamic &&
-    experimental.isRoutePPREnabled
-  ) {
-    return [
-      actualSegment,
-      <React.Fragment key={cacheNodeKey}>
-        <Postpone
-          reason='dynamic = "force-dynamic" was used'
-          route={workStore.route}
-        />
-        {layerAssets}
-      </React.Fragment>,
-      parallelRouteCacheNodeSeedData,
-      loadingData,
-      true,
-    ]
-  }
-
   const isClientComponent = isClientReference(layoutOrPageMod)
 
   if (

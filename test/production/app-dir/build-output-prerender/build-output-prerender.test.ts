@@ -162,8 +162,8 @@ function getPreambleOutput(cliOutput: string): string {
     }
 
     // Ignore the test-only warning that `experimental.ppr` has been defaulted
-    // to `true` when `__NEXT_EXPERIMENTAL_PPR` is set to `true`.
-    if (line.includes('__NEXT_EXPERIMENTAL_PPR')) {
+    // to `true` when `__NEXT_EXPERIMENTAL_CACHE_COMPONENTS` is set to `true`.
+    if (line.includes('__NEXT_EXPERIMENTAL_CACHE_COMPONENTS')) {
       continue
     }
 

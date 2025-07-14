@@ -21,7 +21,10 @@ import { applyFlightData } from '../apply-flight-data'
 import { prefetchQueue } from './prefetch-reducer'
 import { createEmptyCacheNode } from '../../app-router'
 import { DEFAULT_SEGMENT_KEY } from '../../../../shared/lib/segment'
-import { listenForDynamicRequest, startPPRNavigation } from '../ppr-navigations'
+import {
+  listenForDynamicRequest,
+  startCacheComponentsNavigation,
+} from '../ppr-navigations'
 import {
   getOrCreatePrefetchCacheEntry,
   prunePrefetchCache,
@@ -198,7 +201,8 @@ export function navigateReducer(
     // (Very Early Experimental Feature) Segment Cache
     //
     // Bypass the normal prefetch cache and use the new per-segment cache
-    // implementation instead. This is only supported if PPR is enabled, too.
+    // implementation instead. This is only supported if cache components is
+    // enabled, too.
     //
     // Temporary glue code between the router reducer and the new navigation
     // implementation. Eventually we'll rewrite the router reducer to a
@@ -326,18 +330,18 @@ export function navigateReducer(
 
         if (newTree !== null) {
           if (
-            // This is just a paranoid check. When a route is PPRed, the server
-            // will send back a static response that's rendered from
-            // the root. If for some reason it doesn't, we fall back to the
-            // non-PPR implementation.
+            // This is just a paranoid check. When a route is cache components
+            // enabled, the server will send back a static response that's
+            // rendered from the root. If for some reason it doesn't, we fall
+            // back to the non-cache components implementation.
             // TODO: We should get rid of the else branch and do all navigations
-            // via startPPRNavigation. The current structure is just
+            // via startCacheComponentsNavigation. The current structure is just
             // an incremental step.
             seedData &&
             isRootRender &&
             postponed
           ) {
-            const task = startPPRNavigation(
+            const task = startCacheComponentsNavigation(
               navigatedAt,
               currentCache,
               currentTree,
@@ -355,10 +359,10 @@ export function navigateReducer(
                 // page navigation.
                 return handleExternalUrl(state, mutable, href, pendingPush)
               }
-              // Use the tree computed by startPPRNavigation instead
+              // Use the tree computed by startCacheComponentsNavigation instead
               // of the one computed by applyRouterStatePatchToTree.
               // TODO: We should remove applyRouterStatePatchToTree
-              // from the PPR path entirely.
+              // from the cache components path entirely.
               const patchedRouterState: FlightRouterState = task.route
               newTree = patchedRouterState
 
@@ -376,13 +380,14 @@ export function navigateReducer(
                 // Do not block on the result. We'll immediately render the Cache
                 // Node tree and suspend on the dynamic parts. When the request
                 // comes in, we'll fill in missing data and ping React to
-                // re-render. Unlike the lazy fetching model in the non-PPR
-                // implementation, this is modeled as a single React update +
-                // streaming, rather than multiple top-level updates. (However,
-                // even in the new model, we'll still need to sometimes update the
-                // root multiple times per navigation, like if the server sends us
-                // a different response than we expected. For now, we revert back
-                // to the lazy fetching mechanism in that case.)
+                // re-render. Unlike the lazy fetching model in the non-cache
+                // components implementation, this is modeled as a single React
+                // update + streaming, rather than multiple top-level updates.
+                // (However, even in the new model, we'll still need to
+                // sometimes update the root multiple times per navigation, like
+                // if the server sends us a different response than we
+                // expected. For now, we revert back to the lazy fetching
+                // mechanism in that case.)
                 const dynamicRequest = fetchServerResponse(
                   new URL(updatedCanonicalUrl, url.origin),
                   {
@@ -411,10 +416,10 @@ export function navigateReducer(
             // The static response does not include any dynamic holes, so
             // there's no need to do a second request.
             // TODO: As an incremental step this just reverts back to the
-            // non-PPR implementation. We can simplify this branch further,
-            // given that PPR prefetches are always static and return the whole
-            // tree. Or in the meantime we could factor it out into a
-            // separate function.
+            // non-cache components implementation. We can simplify this branch
+            // further, given that cache components prefetches are always static
+            // and return the whole tree. Or in the meantime we could factor it
+            // out into a separate function.
 
             if (isNavigatingToNewRootLayout(currentTree, newTree)) {
               return handleExternalUrl(state, mutable, href, pendingPush)

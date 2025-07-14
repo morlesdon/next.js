@@ -39,7 +39,6 @@ import {
   VIEWPORT_BOUNDARY_NAME,
 } from './metadata-constants'
 import { AsyncMetadataOutlet } from '../../client/components/metadata/async-metadata'
-import { isPostpone } from '../../server/lib/router-utils/is-postpone'
 import { createServerSearchParamsForMetadata } from '../../server/request/search-params'
 import { createServerPathnameForMetadata } from '../../server/request/pathname'
 
@@ -185,17 +184,7 @@ export function createMetadataComponents({
           }
         } catch (notFoundMetadataErr) {
           error = notFoundMetadataErr
-          // In PPR rendering we still need to throw the postpone error.
-          // If metadata is postponed, React needs to be aware of the location of error.
-          if (serveStreamingMetadata && isPostpone(notFoundMetadataErr)) {
-            throw notFoundMetadataErr
-          }
         }
-      }
-      // In PPR rendering we still need to throw the postpone error.
-      // If metadata is postponed, React needs to be aware of the location of error.
-      if (serveStreamingMetadata && isPostpone(metadataErr)) {
-        throw metadataErr
       }
       // We don't actually want to error in this component. We will
       // also error in the MetadataOutlet which causes the error to

@@ -124,7 +124,7 @@
     "bundlePagesExternals": false,
     "parallelServerCompiles": false,
     "parallelServerBuildTraces": false,
-    "ppr": false,
+    "cacheComponents": false,
     "missingSuspenseWithCSRBailout": true,
     "optimizeServerReact": true,
     "useEarlyImport": false,

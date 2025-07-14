@@ -771,7 +771,7 @@ describe('app-dir static/dynamic handling', () => {
 
   if (isNextStart) {
     it('should not encode dynamic parameters as search parameters in RSC data', async () => {
-      const data = process.env.__NEXT_EXPERIMENTAL_PPR
+      const data = process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS
         ? await next.readFile('.next/server/app/blog/seb.prefetch.rsc')
         : await next.readFile('.next/server/app/blog/seb.rsc')
 
@@ -2791,7 +2791,7 @@ describe('app-dir static/dynamic handling', () => {
     for (let i = 0; i < 5; i++) {
       const res = await next.fetch('/articles/non-existent')
 
-      if (process.env.__NEXT_EXPERIMENTAL_PPR && !isNextDev) {
+      if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS && !isNextDev) {
         expect(res.status).toBe(200)
       } else {
         expect(res.status).toBe(404)
@@ -3006,7 +3006,7 @@ describe('app-dir static/dynamic handling', () => {
     })
   } else {
     // TODO: re-implement this in a way that'll support PFPR
-    if (!process.env.__NEXT_EXPERIMENTAL_PPR) {
+    if (!process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS) {
       it('should not error with dynamic server usage with force-static', async () => {
         const res = await next.fetch(
           '/static-to-dynamic-error-forced/static-bailout-1'
@@ -3047,7 +3047,7 @@ describe('app-dir static/dynamic handling', () => {
       )
     })
 
-    if (!process.env.__NEXT_EXPERIMENTAL_PPR) {
+    if (!process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS) {
       it('should properly error when dynamic = "error" page uses dynamic', async () => {
         const res = await next.fetch('/dynamic-error/static-bailout-1')
         const outputIndex = next.cliOutput.length
@@ -3944,7 +3944,7 @@ describe('app-dir static/dynamic handling', () => {
     expect(html).toInclude('"noindex"')
     expect(html).toInclude('This page could not be found.')
 
-    if (process.env.__NEXT_EXPERIMENTAL_PPR && !isNextDev) {
+    if (process.env.__NEXT_EXPERIMENTAL_CACHE_COMPONENTS && !isNextDev) {
       expect(res.status).toBe(200)
     } else {
       expect(res.status).toBe(404)

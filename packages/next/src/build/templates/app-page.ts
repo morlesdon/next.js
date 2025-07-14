@@ -14,7 +14,6 @@ import { getRequestMeta } from '../../server/request-meta'
 import { BaseServerSpan } from '../../server/lib/trace/constants'
 import { interopDefault } from '../../server/app-render/interop-default'
 import { NodeNextRequest, NodeNextResponse } from '../../server/base-http/node'
-import { checkIsAppPPREnabled } from '../../server/lib/experimental/ppr'
 import {
   getFallbackRouteParams,
   type FallbackRouteParams,
@@ -194,62 +193,42 @@ export async function handler(
 
   const isPossibleServerAction = getIsPossibleServerAction(req)
 
-  /**
-   * If the route being rendered is an app page, and the ppr feature has been
-   * enabled, then the given route _could_ support PPR.
-   */
-  const couldSupportPPR: boolean = checkIsAppPPREnabled(
-    nextConfig.experimental.ppr
-  )
-
   // When enabled, this will allow the use of the `?__nextppronly` query to
   // enable debugging of the static shell.
   const hasDebugStaticShellQuery =
     process.env.__NEXT_EXPERIMENTAL_STATIC_SHELL_DEBUGGING === '1' &&
     typeof query.__nextppronly !== 'undefined' &&
-    couldSupportPPR
+    nextConfig.experimental.cacheComponents === true
 
   // When enabled, this will allow the use of the `?__nextppronly` query
   // to enable debugging of the fallback shell.
   const hasDebugFallbackShellQuery =
     hasDebugStaticShellQuery && query.__nextppronly === 'fallback'
 
-  // This page supports PPR if it is marked as being `PARTIALLY_STATIC` in the
-  // prerender manifest and this is an app page.
-  const isRoutePPREnabled: boolean =
-    couldSupportPPR &&
-    ((
-      prerenderManifest.routes[normalizedSrcPage] ??
-      prerenderManifest.dynamicRoutes[normalizedSrcPage]
-    )?.renderingMode === 'PARTIALLY_STATIC' ||
-      // Ideally we'd want to check the appConfig to see if this page has PPR
-      // enabled or not, but that would require plumbing the appConfig through
-      // to the server during development. We assume that the page supports it
-      // but only during development.
-      (hasDebugStaticShellQuery &&
-        (routeModule.isDev === true ||
-          routerServerContext?.experimentalTestProxy === true)))
+  // This page supports cacheComponents if it's enabled in the config.
+  const cacheComponents: boolean =
+    nextConfig.experimental.cacheComponents === true
 
   const isDebugStaticShell: boolean =
-    hasDebugStaticShellQuery && isRoutePPREnabled
+    hasDebugStaticShellQuery && cacheComponents
 
   // We should enable debugging dynamic accesses when the static shell
   // debugging has been enabled and we're also in development mode.
   const isDebugDynamicAccesses =
     isDebugStaticShell && routeModule.isDev === true
 
-  const isDebugFallbackShell = hasDebugFallbackShellQuery && isRoutePPREnabled
+  const isDebugFallbackShell = hasDebugFallbackShellQuery && cacheComponents
 
   // If we're in minimal mode, then try to get the postponed information from
   // the request metadata. If available, use it for resuming the postponed
   // render.
-  const minimalPostponed = isRoutePPREnabled ? initialPostponed : undefined
+  const minimalPostponed = cacheComponents ? initialPostponed : undefined
 
-  // If PPR is enabled, and this is a RSC request (but not a prefetch), then
-  // we can use this fact to only generate the flight data for the request
-  // because we can't cache the HTML (as it's also dynamic).
+  // If cacheComponents is enabled, and this is a RSC request (but not a
+  // prefetch), then we can use this fact to only generate the flight data for
+  // the request because we can't cache the HTML (as it's also dynamic).
   const isDynamicRSCRequest =
-    isRoutePPREnabled && isRSCRequest && !isPrefetchRSCRequest
+    cacheComponents && isRSCRequest && !isPrefetchRSCRequest
 
   // Need to read this before it's stripped by stripFlightHeaders. We don't
   // need to transfer it to the request meta because it's only read
@@ -265,7 +244,7 @@ export async function handler(
     ? true
     : shouldServeStreamingMetadata(userAgent, nextConfig.htmlLimitedBots)
 
-  if (isHtmlBot && isRoutePPREnabled) {
+  if (isHtmlBot && cacheComponents) {
     isSSG = false
     serveStreamingMetadata = false
   }
@@ -285,8 +264,9 @@ export async function handler(
     // HTML (it's dynamic).
     isDynamicRSCRequest
 
-  // When html bots request PPR page, perform the full dynamic rendering.
-  const shouldWaitOnAllReady = isHtmlBot && isRoutePPREnabled
+  // When html bots request cacheComponents page, perform the full dynamic
+  // rendering.
+  const shouldWaitOnAllReady = isHtmlBot && cacheComponents
 
   let ssgCacheKey: string | null = null
   if (
@@ -494,10 +474,9 @@ export async function handler(
             : {}),
 
           experimental: {
-            isRoutePPREnabled,
+            cacheComponents,
             expireTime: nextConfig.expireTime,
             staleTimes: nextConfig.experimental.staleTimes,
-            cacheComponents: Boolean(nextConfig.experimental.cacheComponents),
             clientSegmentCache: Boolean(
               nextConfig.experimental.clientSegmentCache
             ),
@@ -551,7 +530,7 @@ export async function handler(
         isSSG &&
         cacheControl?.revalidate === 0 &&
         !routeModule.isDev &&
-        !isRoutePPREnabled
+        !cacheComponents
       ) {
         const staticBailoutInfo = metadata.staticBailoutInfo
 
@@ -662,7 +641,7 @@ export async function handler(
 
         let fallbackResponse: ResponseCacheEntry | null | undefined
 
-        if (isRoutePPREnabled && !isRSCRequest) {
+        if (cacheComponents && !isRSCRequest) {
           // We use the response cache here to handle the revalidation and
           // management of the fallback shell.
           fallbackResponse = await routeModule.handleResponse({
@@ -672,7 +651,6 @@ export async function handler(
             routeKind: RouteKind.APP_PAGE,
             isFallback: true,
             prerenderManifest,
-            isRoutePPREnabled,
             responseGenerator: async () =>
               doRender({
                 span,
@@ -728,12 +706,12 @@ export async function handler(
         }
       }
 
-      // If this is a dynamic route with PPR enabled and the default route
-      // matches were set, then we should pass the fallback route params to
-      // the renderer as this is a fallback revalidation request.
+      // If this is a dynamic route with Cache Components enabled and the
+      // default route matches were set, then we should pass the fallback route
+      // params to the renderer as this is a fallback revalidation request.
       const fallbackRouteParams =
         pageIsDynamic &&
-        isRoutePPREnabled &&
+        cacheComponents &&
         (getRequestMeta(req, 'renderFallbackShell') || isDebugFallbackShell)
           ? getFallbackRouteParams(pathname)
           : null
@@ -756,7 +734,6 @@ export async function handler(
           }),
         routeKind: RouteKind.APP_PAGE,
         isOnDemandRevalidate,
-        isRoutePPREnabled,
         req,
         nextConfig,
         prerenderManifest,
@@ -833,13 +810,13 @@ export async function handler(
       }
 
       // If this is in minimal mode and this is a flight request that isn't a
-      // prefetch request while PPR is enabled, it cannot be cached as it contains
-      // dynamic content.
+      // prefetch request while Cache Components is enabled, it cannot be cached
+      // as it contains dynamic content.
       else if (
         minimalMode &&
         isRSCRequest &&
         !isPrefetchRSCRequest &&
-        isRoutePPREnabled
+        cacheComponents
       ) {
         cacheControl = { revalidate: 0, expire: undefined }
       } else if (!routeModule.isDev) {
@@ -888,12 +865,13 @@ export async function handler(
         // should never reach the application layer (lambda). We should either
         // respond from the cache (HIT) or respond with 204 No Content (MISS).
 
-        // Set a header to indicate that PPR is enabled for this route. This
-        // lets the client distinguish between a regular cache miss and a cache
-        // miss due to PPR being disabled. In other contexts this header is used
-        // to indicate that the response contains dynamic data, but here we're
-        // only using it to indicate that the feature is enabled — the segment
-        // response itself contains whether the data is dynamic.
+        // Set a header to indicate that Cache Components is enabled for this
+        // route. This lets the client distinguish between a regular cache miss
+        // and a cache miss due to Cache Components being disabled. In other
+        // contexts this header is used to indicate that the response contains
+        // dynamic data, but here we're only using it to indicate that the
+        // feature is enabled — the segment response itself contains whether the
+        // data is dynamic.
         res.setHeader(NEXT_DID_POSTPONE_HEADER, '2')
 
         // Add the cache tags header to the response if it exists and we're in
@@ -918,11 +896,11 @@ export async function handler(
         }
 
         // Cache miss. Either a cache entry for this route has not been generated
-        // (which technically should not be possible when PPR is enabled, because
-        // at a minimum there should always be a fallback entry) or there's no
-        // match for the requested segment. Respond with a 204 No Content. We
-        // don't bother to respond with 404, because these requests are only
-        // issued as part of a prefetch.
+        // (which technically should not be possible when Cache Components is
+        // enabled, because at a minimum there should always be a fallback entry)
+        // or there's no match for the requested segment. Respond with a 204 No
+        // Content. We don't bother to respond with 404, because these requests
+        // are only issued as part of a prefetch.
         res.statusCode = 204
         return sendRenderResult({
           req,
@@ -999,8 +977,8 @@ export async function handler(
 
       // If the request is a data request, then we shouldn't set the status code
       // from the response because it should always be 200. This should be gated
-      // behind the experimental PPR flag.
-      if (cachedData.status && (!isRSCRequest || !isRoutePPREnabled)) {
+      // behind the experimental.cacheComponents flag.
+      if (cachedData.status && (!isRSCRequest || !cacheComponents)) {
         res.statusCode = cachedData.status
       }
 

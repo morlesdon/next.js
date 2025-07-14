@@ -65,6 +65,7 @@ export interface ExportPageInput {
   enableExperimentalReact?: boolean
   sriEnabled: boolean
   renderResumeDataCache: RenderResumeDataCache | undefined
+  cacheComponents: boolean
 }
 
 export type ExportRouteResult =
@@ -141,11 +142,11 @@ export type ExportAppResult = {
        */
       metadata?: Partial<RouteMetadata>
       /**
-       * If the page has an empty static shell when using PPR.
+       * If the page has an empty static shell when using Cache Components.
        */
       hasEmptyStaticShell?: boolean
       /**
-       * If the page has postponed when using PPR.
+       * If the page has postponed when using Cache Components.
        */
       hasPostponed?: boolean
 

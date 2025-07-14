@@ -240,15 +240,6 @@ function assignDefaults(
     {}
   ) as NextConfig & { configFileName: string }
 
-  // TODO: remove these once we've made PPR default
-  // If this was defaulted to true, it implies that the configuration was
-  // overridden for testing to be defaulted on.
-  if (defaultConfig.experimental?.ppr) {
-    Log.warn(
-      `\`experimental.ppr\` has been defaulted to \`true\` because \`__NEXT_EXPERIMENTAL_PPR\` was set to \`true\` during testing.`
-    )
-  }
-
   if (defaultConfig.experimental?.cacheComponents) {
     Log.warn(
       `\`experimental.cacheComponents\` has been defaulted to \`true\` because \`__NEXT_EXPERIMENTAL_CACHE_COMPONENTS\` was set to \`true\` during testing.`
@@ -262,6 +253,39 @@ function assignDefaults(
       ...defaultConfig.experimental,
       ...config.experimental,
     },
+  }
+
+  // Handle deprecation of experimental.ppr and migrate to experimental.cacheComponents
+  if (typeof result.experimental?.ppr === 'boolean') {
+    warnOptionHasBeenDeprecated(
+      result,
+      'experimental.ppr',
+      `\`experimental.ppr\` has been renamed to \`experimental.cacheComponents\`. Please update your ${configFileName} file accordingly.`,
+      silent
+    )
+
+    // If cacheComponents was not explicitly set by the user (i.e., it's still the default value),
+    // use the dynamicIO value. We check against the user config, not the merged result.
+    if (userConfig.experimental?.cacheComponents === undefined) {
+      result.experimental.cacheComponents = result.experimental.ppr
+    } else if (
+      userConfig.experimental?.cacheComponents !== result.experimental.ppr
+    ) {
+      throw new Error(
+        `\`experimental.ppr\` and \`experimental.cacheComponents\` cannot be set to different values. Please remove \`experimental.ppr\` from ${configFileName}.`
+      )
+    }
+
+    // Remove the deprecated property
+    delete result.experimental.ppr
+  }
+
+  // Error when ppr is set to incremental as cache components does not support
+  // it.
+  if (result.experimental.ppr === 'incremental') {
+    throw new Error(
+      `\`experimental.ppr\` cannot be set to "incremental" as cache components does not support it. Please remove it from ${configFileName}.`
+    )
   }
 
   // Handle deprecation of experimental.dynamicIO and migrate to experimental.cacheComponents
@@ -1132,20 +1156,6 @@ function assignDefaults(
   // backwards compatibility.
   if (result.experimental.useCache === undefined) {
     result.experimental.useCache = result.experimental.cacheComponents
-  }
-
-  // If cacheComponents is enabled, we also enable PPR.
-  if (result.experimental.cacheComponents) {
-    if (
-      userConfig.experimental?.ppr === false ||
-      userConfig.experimental?.ppr === 'incremental'
-    ) {
-      throw new Error(
-        `\`experimental.ppr\` can not be \`${JSON.stringify(userConfig.experimental?.ppr)}\` when \`experimental.cacheComponents\` is \`true\`. PPR is implicitly enabled when Cache Components is enabled.`
-      )
-    }
-
-    result.experimental.ppr = true
   }
 
   return result as NextConfigComplete

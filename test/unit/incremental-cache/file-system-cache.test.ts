@@ -17,6 +17,7 @@ describe('FileSystemCache', () => {
       fs: nodeFs,
       serverDistDir: cacheDir,
       revalidatedTags: [],
+      cacheComponents: false,
     })
 
     const binary = await fs.readFile(
@@ -62,6 +63,7 @@ describe('FileSystemCache (isrMemory 0)', () => {
     serverDistDir: cacheDir,
     revalidatedTags: [],
     maxMemoryCacheSize: 0, // disable memory cache
+    cacheComponents: false,
   })
 
   it('should cache fetch', async () => {

@@ -411,10 +411,11 @@ function getPrefetchEntryCacheStatus({
     // When this is available, it takes precedence over any of the heuristics
     // that follow.
     //
-    // TODO: When PPR is enabled, the server will *always* return a stale time
-    // when prefetching. We should never use a prefetch entry that hasn't yet
-    // received data from the server. So the only two cases should be 1) we use
-    // the server-generated stale time 2) the unresolved entry is discarded.
+    // TODO: When cache components is enabled, the server will *always* return a
+    // stale time when prefetching. We should never use a prefetch entry that
+    // hasn't yet received data from the server. So the only two cases should
+    // be 1) we use the server-generated stale time 2) the unresolved entry is
+    // discarded.
     return Date.now() < prefetchTime + staleTime
       ? PrefetchCacheEntryStatus.fresh
       : PrefetchCacheEntryStatus.stale

@@ -358,7 +358,6 @@ export async function handler(
         routeKind: RouteKind.APP_ROUTE,
         isFallback: false,
         prerenderManifest,
-        isRoutePPREnabled: false,
         isOnDemandRevalidate,
         revalidateOnlyGenerated,
         responseGenerator,

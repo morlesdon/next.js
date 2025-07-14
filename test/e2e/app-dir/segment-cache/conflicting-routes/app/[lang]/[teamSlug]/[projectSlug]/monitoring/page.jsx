@@ -5,5 +5,3 @@ export default async function Page() {
 
   return <div>/[lang]/[teamSlug]/[projectSlug]/monitoring</div>
 }
-
-export const experimental_ppr = true

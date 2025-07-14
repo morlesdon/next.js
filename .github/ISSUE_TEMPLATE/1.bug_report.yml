@@ -107,7 +107,6 @@ body:
         - 'Output'
         - 'Pages Router'
         - 'Parallel & Intercepting Routes'
-        - 'Partial Prerendering (PPR)'
         - 'Performance'
         - 'React'
         - 'Redirects'

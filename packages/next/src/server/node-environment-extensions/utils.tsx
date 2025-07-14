@@ -89,7 +89,6 @@ export function io(expression: string, type: ApiType) {
         trackSynchronousPlatformIOAccessInDev(workUnitStore)
       }
       break
-    case 'prerender-ppr':
     case 'prerender-legacy':
     case 'cache':
     case 'unstable-cache':

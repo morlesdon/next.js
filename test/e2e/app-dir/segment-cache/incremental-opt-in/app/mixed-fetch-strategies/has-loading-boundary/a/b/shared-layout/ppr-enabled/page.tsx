@@ -1,8 +1,6 @@
 import { Suspense } from 'react'
 import { connection } from 'next/server'
 
-export const experimental_ppr = true
-
 async function Content() {
   await connection()
   return <div id="page-content">Dynamic page content</div>

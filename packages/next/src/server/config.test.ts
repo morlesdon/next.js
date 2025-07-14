@@ -75,13 +75,13 @@ describe('loadConfig', () => {
       const loadConfigPromise = loadConfig('', __dirname, {
         customConfig: {
           experimental: {
-            ppr: true,
+            cacheComponents: true,
           },
         },
       })
 
       await expect(loadConfigPromise).rejects.toThrow(
-        /The experimental feature "experimental.ppr" can only be enabled when using the latest canary version of Next.js./
+        /The experimental feature "experimental.cacheComponents" can only be enabled when using the latest canary version of Next.js./
       )
 
       try {
@@ -92,20 +92,6 @@ describe('loadConfig', () => {
         // Check that there's no stack trace
         expect(error.stack).toBeUndefined()
       }
-    })
-
-    it('errors when using PPR if not in canary', async () => {
-      await expect(
-        loadConfig('', __dirname, {
-          customConfig: {
-            experimental: {
-              ppr: true,
-            },
-          },
-        })
-      ).rejects.toThrow(
-        /The experimental feature "experimental.ppr" can only be enabled when using the latest canary version of Next.js./
-      )
     })
 
     it('errors when using cacheComponents if not in canary', async () => {
@@ -157,22 +143,21 @@ describe('loadConfig', () => {
           },
         })
       ).rejects.toThrow(
-        '`experimental.ppr` can not be `false` when `experimental.cacheComponents` is `true`. PPR is implicitly enabled when Cache Components is enabled.'
+        '`experimental.ppr` and `experimental.cacheComponents` cannot be set to different values. Please remove `experimental.ppr` from next.config.js.'
       )
     })
 
-    it('errors when cacheComponents is enabled but PPR set to "incremental"', async () => {
+    it('errors when PPR set to "incremental"', async () => {
       await expect(
         loadConfig('', __dirname, {
           customConfig: {
             experimental: {
-              cacheComponents: true,
               ppr: 'incremental',
             },
           },
         })
       ).rejects.toThrow(
-        '`experimental.ppr` can not be `"incremental"` when `experimental.cacheComponents` is `true`. PPR is implicitly enabled when Cache Components is enabled.'
+        '`experimental.ppr` cannot be set to "incremental" as cache components does not support it. Please remove it from next.config.js.'
       )
     })
 
